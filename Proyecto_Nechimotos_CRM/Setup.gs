@@ -130,11 +130,11 @@ function crearAdminInicial() {
  */
 function cargarDatosDemo() {
   var demo = [
-    ['MD625GF12N1234567', 'GF1AN1234567', 'TVS', 'Raider 125 FI', 2026, 'Rojo', 'PDV 01 - Principal'],
-    ['MD625GF12N1234568', 'GF1AN1234568', 'TVS', 'NTORQ 125 XConnect', 2026, 'Negro', 'PDV 01 - Principal'],
-    ['MD625GF12N1234569', 'GF1AN1234569', 'TVS', 'Apache RTR 160 4V', 2025, 'Azul', 'PDV 02 - Norte'],
-    ['9C2KC2200NR000001', 'KC22NR000001', 'AUTECO MOBILITY', 'MRX 150', 2026, 'Blanco', 'PDV 03 - Sur'],
-    ['9C2KC2200NR000002', 'KC22NR000002', 'AUTECO MOBILITY', 'Agility Fusion', 2026, 'Gris', 'PDV 03 - Sur']
+    ['MD625GF12N1234567', 'GF1AN1234567', 'TVS', 'Raider 125 FI', 2026, 'Rojo', 'MAJAGUAL'],
+    ['MD625GF12N1234568', 'GF1AN1234568', 'TVS', 'NTORQ 125 XConnect', 2026, 'Negro', 'MAJAGUAL'],
+    ['MD625GF12N1234569', 'GF1AN1234569', 'TVS', 'Apache RTR 160 4V', 2025, 'Azul', 'MONTELIBANO TVS'],
+    ['9C2KC2200NR000001', 'KC22NR000001', 'AUTECO MOBILITY', 'MRX 150', 2026, 'Blanco', 'BANCO MOBILITY'],
+    ['9C2KC2200NR000002', 'KC22NR000002', 'AUTECO MOBILITY', 'Agility Fusion', 2026, 'Gris', 'BANCO MOBILITY']
   ];
   var hoy = new Date();
   demo.forEach(function (d, i) {

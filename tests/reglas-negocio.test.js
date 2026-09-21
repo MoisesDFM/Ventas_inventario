@@ -25,18 +25,18 @@ check('Login con clave errada falla', login('admin.nechimotos', 'mala').ok === f
 
 // 3. Alta de asesores
 ok(crearUsuario(adm.token, { usuario: 'asesor.tvs', password: 'Clave12345', rol: 'ASESOR_PDV',
-  pdv: 'PDV 02 - Norte', marca: 'TVS' }));
-ok(crearUsuario(adm.token, { usuario: 'asesor.sur', password: 'Clave12345', rol: 'ASESOR_PDV',
-  pdv: 'PDV 03 - Sur', marca: 'MOBILITY' }));
+  pdv: 'MONTELIBANO TVS', marca: 'TVS' }));
+ok(crearUsuario(adm.token, { usuario: 'asesor.banco', password: 'Clave12345', rol: 'ASESOR_PDV',
+  pdv: 'BANCO MOBILITY', marca: 'MOBILITY' }));
 const a1 = ok(login('asesor.tvs', 'Clave12345'));
-const a2 = ok(login('asesor.sur', 'Clave12345'));
-check('Asesor autenticado con su PDV', a1.perfil.pdv === 'PDV 02 - Norte' && a1.perfil.esGlobal === false);
+const a2 = ok(login('asesor.banco', 'Clave12345'));
+check('Asesor autenticado con su PDV', a1.perfil.pdv === 'MONTELIBANO TVS' && a1.perfil.esGlobal === false);
 
 // 4. Ingreso de unidades
 ok(ingresarUnidad(a1.token, { vin: 'MD625GF12N1111111', motor: 'M1', marca: 'TVS',
   linea: 'Apache RTR 160 4V', modeloAno: 2026, color: 'Rojo' }));
 ok(ingresarUnidad(adm.token, { vin: '9C2KC2200NR222222', motor: 'M2', marca: 'AUTECO MOBILITY',
-  linea: 'MRX 150', modeloAno: 2026, color: 'Blanco', pdv: 'PDV 03 - Sur' }));
+  linea: 'MRX 150', modeloAno: 2026, color: 'Blanco', pdv: 'BANCO MOBILITY' }));
 check('VIN duplicado rechazado',
   ingresarUnidad(a1.token, { vin: 'MD625GF12N1111111', marca: 'TVS', linea: 'MRX 150', modeloAno: 2026 }).ok === false);
 check('Línea de otra marca rechazada',
@@ -47,7 +47,7 @@ const invA1 = ok(obtenerInventario(a1.token, {}));
 const invA2 = ok(obtenerInventario(a2.token, {}));
 const invAdm = ok(obtenerInventario(adm.token, {}));
 check('Asesor TVS solo ve su unidad', invA1.filas.length === 1 && invA1.filas[0].Chasis_VIN === 'MD625GF12N1111111');
-check('Asesor Sur solo ve la suya', invA2.filas.length === 1 && invA2.filas[0].Marca === 'AUTECO MOBILITY');
+check('Asesor de punto MOBILITY solo ve la suya', invA2.filas.length === 1 && invA2.filas[0].Marca === 'AUTECO MOBILITY');
 check('ADMIN ve toda la red', invAdm.filas.length === 2);
 check('Asesor no puede vender unidad ajena',
   registrarVenta(a1.token, { vin: '9C2KC2200NR222222', tipoVenta: 'Contado' }).ok === false);
@@ -55,12 +55,12 @@ check('Asesor no puede vender unidad ajena',
 // 6. Traslado en 2 pasos
 const destinos = ok(obtenerDestinosValidos(a1.token, 'MD625GF12N1111111'));
 check('Destinos filtrados por marca TVS',
-  destinos.destinos.length > 0 && destinos.destinos.indexOf('PDV 03 - Sur') === -1,
+  destinos.destinos.length > 0 && destinos.destinos.indexOf('BANCO MOBILITY') === -1,
   destinos.destinos.slice(0, 3).join(', '));
 check('Destino no homologado rechazado',
-  despacharTraslado(a1.token, { vin: 'MD625GF12N1111111', pdvDestino: 'PDV 03 - Sur' }).ok === false);
+  despacharTraslado(a1.token, { vin: 'MD625GF12N1111111', pdvDestino: 'BANCO MOBILITY' }).ok === false);
 
-const desp = ok(despacharTraslado(a1.token, { vin: 'MD625GF12N1111111', pdvDestino: 'PDV 01 - Principal' }));
+const desp = ok(despacharTraslado(a1.token, { vin: 'MD625GF12N1111111', pdvDestino: 'MAJAGUAL' }));
 check('Despacho deja la unidad En Traslado',
   ok(obtenerInventario(a1.token, {})).filas[0].Estado === 'En Traslado');
 check('Unidad en tránsito no se puede vender',
@@ -68,14 +68,14 @@ check('Unidad en tránsito no se puede vender',
 check('Un PDV ajeno no confirma la recepción',
   confirmarRecepcion(a2.token, desp.ID_Traslado, '').ok === false);
 
-ok(crearUsuario(adm.token, { usuario: 'asesor.principal', password: 'Clave12345', rol: 'ASESOR_PDV',
-  pdv: 'PDV 01 - Principal', marca: 'TODAS' }));
-const a3 = ok(login('asesor.principal', 'Clave12345'));
+ok(crearUsuario(adm.token, { usuario: 'asesor.majagual', password: 'Clave12345', rol: 'ASESOR_PDV',
+  pdv: 'MAJAGUAL', marca: 'TODAS' }));
+const a3 = ok(login('asesor.majagual', 'Clave12345'));
 const rec = ok(confirmarRecepcion(a3.token, desp.ID_Traslado, 'Sin novedad'));
-check('Recepción confirmada mueve el PDV', rec.PDV_Destino === 'PDV 01 - Principal');
+check('Recepción confirmada mueve el PDV', rec.PDV_Destino === 'MAJAGUAL');
 const invA3 = ok(obtenerInventario(a3.token, {}));
 check('Unidad Disponible en destino',
-  invA3.filas.length === 1 && invA3.filas[0].Estado === 'Disponible' && invA3.filas[0].PDV_Actual === 'PDV 01 - Principal');
+  invA3.filas.length === 1 && invA3.filas[0].Estado === 'Disponible' && invA3.filas[0].PDV_Actual === 'MAJAGUAL');
 check('Origen ya no ve la unidad', ok(obtenerInventario(a1.token, {})).filas.length === 0);
 check('Traslado no se confirma dos veces',
   confirmarRecepcion(a3.token, desp.ID_Traslado, '').ok === false);

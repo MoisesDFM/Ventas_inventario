@@ -38,8 +38,9 @@ Proyecto_Nechimotos_CRM/
 
 1. Cree un proyecto en [script.google.com](https://script.google.com) y suba los
    archivos de `Proyecto_Nechimotos_CRM/` (manualmente o con `clasp push`).
-2. Ajuste en `Config.gs` el arreglo `CATALOGO_PDV` con los nombres reales de los
-   27 puntos y las marcas que cada uno está autorizado a manejar.
+2. Verifique en `Config.gs` el arreglo `CATALOGO_PDV`: trae los 27 puntos reales
+   de la red. Los nombres allí escritos son la llave del sistema y deben coincidir
+   exactamente con `PDV_Actual` en `Inventario` y `PDV_Venta` en `Ventas`.
 3. Ejecute **`instalarNechimotos()`**. Crea `BaseDatos_Nechimotos_Master` con las
    5 pestañas, encabezados, formatos y validaciones, y guarda su ID en las
    Propiedades del Script (el ID nunca queda escrito en el código).
@@ -51,6 +52,33 @@ Proyecto_Nechimotos_CRM/
    El control de acceso lo hace la aplicación con su propia tabla `Usuarios`,
    de modo que los asesores no necesitan cuenta de Workspace ni permisos sobre Drive.
 7. Ingrese con el ADMIN y cambie la contraseña desde *Cambiar contraseña*.
+
+## Red de puntos de venta (27 PDV)
+
+Definidos en `CATALOGO_PDV` (`Config.gs`). El acceso por marca restringe qué
+unidades puede alojar cada punto y, por lo tanto, qué destinos ofrece el módulo
+de traslados.
+
+| PDV | Acceso | PDV | Acceso |
+|---|---|---|---|
+| MAJAGUAL | TODAS | MAGANGUE 1 | TODAS |
+| NECHI | TODAS | MAGANGUE 2 | TODAS |
+| SUCRE | TODAS | PAILITAS | TODAS |
+| ZARAGOZA | TODAS | PELAYA | TODAS |
+| PLANETA | TODAS | ASTREA | TODAS |
+| GUARANDA | TODAS | GUAMAL | TODAS |
+| MONTELIBANO MOBILITY | MOBILITY | LA JAGUA | TODAS |
+| MONTELIBANO TVS | TVS | BECERRIL | TODAS |
+| PUERTO LIBERTADOR | TODAS | CODAZZI | TODAS |
+| SAN MARCOS | TODAS | CURUMANI | TODAS |
+| AYAPEL | TODAS | CHIRIGUANA | TODAS |
+| LA APARTADA | TODAS | SANTA ANA | TODAS |
+| SAN MARTIN | TODAS | BANCO MOBILITY | MOBILITY |
+| BANCO TVS | TVS | | |
+
+Montelíbano y El Banco operan vitrina separada por marca, por eso figuran como
+dos puntos independientes: una moto TVS nunca puede trasladarse a
+`MONTELIBANO MOBILITY` ni a `BANCO MOBILITY`, y viceversa.
 
 ## Roles y permisos (validados en el servidor)
 

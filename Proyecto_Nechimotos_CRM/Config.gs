@@ -106,43 +106,49 @@ var LOGIN_BLOQUEO_SEGUNDOS = 10 * 60;
 var LOCK_TIMEOUT_MS = 20000;
 
 /* ===========================================================================
- *  CATÁLOGO DE PUNTOS DE VENTA (27 PDV)
+ *  CATÁLOGO DE PUNTOS DE VENTA (27 PDV reales de la red Nechimotos)
  * ---------------------------------------------------------------------------
  *  `marcas` define qué marcas puede almacenar cada punto. Esta lista alimenta:
  *   - el selector de PDV_Destino en traslados (solo se muestran puntos
- *     autorizados para la marca de la moto),
+ *     autorizados para la marca de la motocicleta trasladada),
+ *   - el PDV_Asignado disponible al crear usuarios,
  *   - los filtros de reportes de la jefatura comercial.
- *  Ajuste los nombres/ciudades a la operación real de Nechimotos; el código no
- *  depende de los nombres concretos, solo de que coincidan con `PDV_Actual`.
+ *
+ *  Puntos mixtos (acceso TODAS) manejan TVS y AUTECO MOBILITY. Montelíbano y
+ *  El Banco operan con vitrina separada por marca, por eso figuran como dos
+ *  puntos independientes y cada uno solo admite la suya.
+ *
+ *  El nombre aquí escrito es la llave: debe coincidir exactamente con el valor
+ *  de `PDV_Actual` en la pestaña Inventario y `PDV_Venta` en Ventas.
  * =========================================================================== */
 var CATALOGO_PDV = [
-  { nombre: 'PDV 01 - Principal',      ciudad: 'Cali',        marcas: ['TVS', 'AUTECO MOBILITY'] },
-  { nombre: 'PDV 02 - Norte',          ciudad: 'Cali',        marcas: ['TVS'] },
-  { nombre: 'PDV 03 - Sur',            ciudad: 'Cali',        marcas: ['AUTECO MOBILITY'] },
-  { nombre: 'PDV 04 - Centro',         ciudad: 'Cali',        marcas: ['TVS', 'AUTECO MOBILITY'] },
-  { nombre: 'PDV 05 - Alameda',        ciudad: 'Cali',        marcas: ['TVS'] },
-  { nombre: 'PDV 06 - Pasoancho',      ciudad: 'Cali',        marcas: ['AUTECO MOBILITY'] },
-  { nombre: 'PDV 07 - Valle del Lili', ciudad: 'Cali',        marcas: ['TVS', 'AUTECO MOBILITY'] },
-  { nombre: 'PDV 08 - Yumbo',          ciudad: 'Yumbo',       marcas: ['TVS'] },
-  { nombre: 'PDV 09 - Jamundi',        ciudad: 'Jamundi',     marcas: ['AUTECO MOBILITY'] },
-  { nombre: 'PDV 10 - Palmira',        ciudad: 'Palmira',     marcas: ['TVS', 'AUTECO MOBILITY'] },
-  { nombre: 'PDV 11 - Buga',           ciudad: 'Buga',        marcas: ['TVS'] },
-  { nombre: 'PDV 12 - Tulua',          ciudad: 'Tulua',       marcas: ['TVS', 'AUTECO MOBILITY'] },
-  { nombre: 'PDV 13 - Cartago',        ciudad: 'Cartago',     marcas: ['AUTECO MOBILITY'] },
-  { nombre: 'PDV 14 - Buenaventura',   ciudad: 'Buenaventura',marcas: ['TVS'] },
-  { nombre: 'PDV 15 - Popayan',        ciudad: 'Popayan',     marcas: ['TVS', 'AUTECO MOBILITY'] },
-  { nombre: 'PDV 16 - Santander',      ciudad: 'Santander Q.',marcas: ['AUTECO MOBILITY'] },
-  { nombre: 'PDV 17 - Pereira',        ciudad: 'Pereira',     marcas: ['TVS'] },
-  { nombre: 'PDV 18 - Dosquebradas',   ciudad: 'Dosquebradas',marcas: ['AUTECO MOBILITY'] },
-  { nombre: 'PDV 19 - Armenia',        ciudad: 'Armenia',     marcas: ['TVS', 'AUTECO MOBILITY'] },
-  { nombre: 'PDV 20 - Manizales',      ciudad: 'Manizales',   marcas: ['TVS'] },
-  { nombre: 'PDV 21 - Ipiales',        ciudad: 'Ipiales',     marcas: ['AUTECO MOBILITY'] },
-  { nombre: 'PDV 22 - Pasto',          ciudad: 'Pasto',       marcas: ['TVS', 'AUTECO MOBILITY'] },
-  { nombre: 'PDV 23 - Tumaco',         ciudad: 'Tumaco',      marcas: ['TVS'] },
-  { nombre: 'PDV 24 - Florencia',      ciudad: 'Florencia',   marcas: ['AUTECO MOBILITY'] },
-  { nombre: 'PDV 25 - Neiva',          ciudad: 'Neiva',       marcas: ['TVS', 'AUTECO MOBILITY'] },
-  { nombre: 'PDV 26 - Bodega CEDI',    ciudad: 'Cali',        marcas: ['TVS', 'AUTECO MOBILITY'] },
-  { nombre: 'PDV 27 - Taller Central', ciudad: 'Cali',        marcas: ['TVS', 'AUTECO MOBILITY'] }
+  { nombre: 'MAJAGUAL',              marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'NECHI',                 marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'SUCRE',                 marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'ZARAGOZA',              marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'PLANETA',               marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'GUARANDA',              marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'MONTELIBANO MOBILITY',  marcas: ['AUTECO MOBILITY'] },
+  { nombre: 'MONTELIBANO TVS',       marcas: ['TVS'] },
+  { nombre: 'PUERTO LIBERTADOR',     marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'SAN MARCOS',            marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'AYAPEL',                marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'LA APARTADA',           marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'SAN MARTIN',            marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'BANCO MOBILITY',        marcas: ['AUTECO MOBILITY'] },
+  { nombre: 'BANCO TVS',             marcas: ['TVS'] },
+  { nombre: 'CURUMANI',              marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'CHIRIGUANA',            marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'SANTA ANA',             marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'MAGANGUE 1',            marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'MAGANGUE 2',            marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'PAILITAS',              marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'PELAYA',                marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'ASTREA',                marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'GUAMAL',                marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'LA JAGUA',              marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'BECERRIL',              marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'CODAZZI',               marcas: ['TVS', 'AUTECO MOBILITY'] }
 ];
 
 /* ===========================================================================
