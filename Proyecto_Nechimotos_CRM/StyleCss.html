@@ -115,15 +115,20 @@
   }
   .topbar h1 { font-size: 18px; }
   .topbar .spacer { flex: 1; }
-  .content { padding: 22px; display: grid; gap: 20px; }
-  .view { display: grid; gap: 18px; animation: fade .22s ease; }
+  .content { padding: 22px; display: grid; gap: 20px; min-width: 0; }
+  .view { display: grid; gap: 18px; animation: fade .22s ease; min-width: 0; }
+  /* Sin `min-width: 0` un hijo de grid nunca se encoge por debajo de su
+     contenido: una tabla ancha estiraría toda la página en vez de dejar que
+     .table-wrap haga scroll horizontal. Es lo que mantiene la app sin
+     desbordamiento en pantallas de teléfono. */
+  .content > *, .view > *, .grid-2 > *, .kpi-grid > * { min-width: 0; }
   @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
   .menu-toggle { display: none; }
 
   /* ---------- 5. COMPONENTES ------------------------------------------- */
   .card {
-    background: var(--surface); border: 1px solid var(--border);
+    min-width: 0; background: var(--surface); border: 1px solid var(--border);
     border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px;
   }
   .card-head {
@@ -182,7 +187,7 @@
   .icon-btn:hover { background: var(--surface-2); }
 
   /* Tablas */
-  .table-wrap { overflow-x: auto; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+  .table-wrap { overflow-x: auto; min-width: 0; border-radius: var(--radius-sm); border: 1px solid var(--border); }
   table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
   thead th {
     position: sticky; top: 0; background: var(--surface-2); text-align: left;
@@ -213,9 +218,13 @@
   .bars { display: grid; gap: 10px; }
   .bar-row { display: grid; grid-template-columns: minmax(96px, 30%) 1fr auto; align-items: center; gap: 10px; }
   .bar-label { font-size: 12.5px; color: var(--text-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .bar-track { background: var(--surface-2); border-radius: 999px; height: 12px; overflow: hidden; }
+  .bar-track { display: block; background: var(--surface-2); border-radius: 999px; height: 12px; overflow: hidden; }
   .bar-fill {
-    height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--brand), #f97316);
+    /* `display:block` es obligatorio: el relleno es un <span> y, al no ser hijo
+       directo de un contenedor flex/grid, sin esto quedaría inline y width/height
+       no tendrían efecto (la barra se vería vacía). */
+    display: block; height: 100%; border-radius: 999px;
+    background: linear-gradient(90deg, var(--brand), #f97316);
     transition: width .5s cubic-bezier(.2,.8,.2,1);
   }
   .bar-fill.azul { background: linear-gradient(90deg, var(--info), #06b6d4); }

@@ -1,0 +1,3906 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+  <title>DEMO · Nechimotos · CRM de Inventarios y Ventas</title>
+  <!-- Hoja de estilos CSS3 nativa (sin Bootstrap) -->
+  <!--
+  ==========================================================================
+   NECHIMOTOS CRM · StyleCss.html
+   CSS3 nativo moderno (sin Bootstrap):
+     · CSS Custom Properties con tema claro/oscuro accesible
+     · CSS Grid + Flexbox, responsive-first (móvil del asesor primero)
+     · Componentes: tarjetas KPI, tablas, badges de estado, modales, toasts
+  ==========================================================================
+-->
+<style>
+  /* ---------- 1. TOKENS DE DISEÑO ------------------------------------- */
+  :root {
+    --brand:        #e11d2a;   /* rojo corporativo Nechimotos */
+    --brand-dark:   #b3141f;
+    --brand-soft:   rgba(225, 29, 42, .12);
+
+    --bg:           #f4f6fb;
+    --surface:      #ffffff;
+    --surface-2:    #f9fafb;
+    --border:       #e3e8ef;
+    --text:         #10151f;
+    --text-soft:    #5b6577;
+
+    --ok:           #0f9d58;
+    --ok-soft:      rgba(15, 157, 88, .14);
+    --warn:         #d97706;
+    --warn-soft:    rgba(217, 119, 6, .14);
+    --info:         #2563eb;
+    --info-soft:    rgba(37, 99, 235, .14);
+    --danger:       #dc2626;
+    --danger-soft:  rgba(220, 38, 38, .14);
+
+    --radius:       14px;
+    --radius-sm:    9px;
+    --shadow:       0 1px 2px rgba(16,21,31,.06), 0 8px 24px rgba(16,21,31,.07);
+    --shadow-lg:    0 24px 60px rgba(16,21,31,.22);
+    --sidebar-w:    248px;
+    --font: "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  [data-theme="dark"] {
+    --bg:        #0d1117;
+    --surface:   #161b22;
+    --surface-2: #1c232d;
+    --border:    #2a323d;
+    --text:      #e8edf5;
+    --text-soft: #97a3b6;
+    --shadow:    0 1px 2px rgba(0,0,0,.5), 0 10px 26px rgba(0,0,0,.45);
+  }
+
+  /* ---------- 2. RESET ------------------------------------------------- */
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; font-family: var(--font); background: var(--bg); color: var(--text);
+    font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, h4 { margin: 0; font-weight: 650; letter-spacing: -.01em; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  [hidden] { display: none !important; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
+
+  /* ---------- 3. LOGIN -------------------------------------------------- */
+  .login-wrap {
+    min-height: 100vh; display: grid; place-items: center; padding: 24px;
+    background:
+      radial-gradient(900px 480px at 12% -10%, var(--brand-soft), transparent 60%),
+      radial-gradient(760px 420px at 110% 110%, rgba(37,99,235,.16), transparent 60%),
+      var(--bg);
+  }
+  .login-card {
+    width: min(100%, 410px); background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; box-shadow: var(--shadow-lg); padding: 34px 30px;
+  }
+  .brand-mark {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 22px;
+  }
+  .brand-logo {
+    width: 46px; height: 46px; border-radius: 13px; display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+    color: #fff; font-weight: 800; font-size: 19px; letter-spacing: -.5px;
+  }
+  .brand-name { font-size: 19px; font-weight: 750; }
+  .brand-sub { font-size: 12.5px; color: var(--text-soft); }
+
+  /* ---------- 4. LAYOUT APP -------------------------------------------- */
+  .app { display: grid; grid-template-columns: var(--sidebar-w) 1fr; min-height: 100vh; }
+
+  .sidebar {
+    background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 6px; padding: 18px 14px;
+    position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  }
+  .side-head { display: flex; align-items: center; gap: 10px; padding: 4px 6px 16px; }
+  .nav-btn {
+    display: flex; align-items: center; gap: 11px; width: 100%; padding: 11px 13px;
+    border: 0; background: transparent; border-radius: var(--radius-sm); cursor: pointer;
+    color: var(--text-soft); font-weight: 560; text-align: left; transition: .16s;
+  }
+  .nav-btn:hover { background: var(--surface-2); color: var(--text); }
+  .nav-btn.active { background: var(--brand-soft); color: var(--brand); font-weight: 680; }
+  .nav-btn .ico { font-size: 17px; width: 20px; text-align: center; }
+  .nav-badge {
+    margin-left: auto; background: var(--brand); color: #fff; border-radius: 999px;
+    font-size: 11px; font-weight: 700; padding: 1px 7px; min-width: 20px; text-align: center;
+  }
+  .side-foot { margin-top: auto; border-top: 1px solid var(--border); padding-top: 12px; }
+
+  .main { display: flex; flex-direction: column; min-width: 0; }
+  .topbar {
+    display: flex; align-items: center; gap: 12px; padding: 14px 22px;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 30;
+  }
+  .topbar h1 { font-size: 18px; }
+  .topbar .spacer { flex: 1; }
+  .content { padding: 22px; display: grid; gap: 20px; min-width: 0; }
+  .view { display: grid; gap: 18px; animation: fade .22s ease; min-width: 0; }
+  /* Sin `min-width: 0` un hijo de grid nunca se encoge por debajo de su
+     contenido: una tabla ancha estiraría toda la página en vez de dejar que
+     .table-wrap haga scroll horizontal. Es lo que mantiene la app sin
+     desbordamiento en pantallas de teléfono. */
+  .content > *, .view > *, .grid-2 > *, .kpi-grid > * { min-width: 0; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .menu-toggle { display: none; }
+
+  /* ---------- 5. COMPONENTES ------------------------------------------- */
+  .card {
+    min-width: 0; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px;
+  }
+  .card-head {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
+  }
+  .card-head h3 { font-size: 15.5px; }
+  .card-head .spacer { flex: 1; }
+  .muted { color: var(--text-soft); font-size: 13px; }
+
+  .kpi-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); }
+  .kpi {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px 17px; box-shadow: var(--shadow); position: relative; overflow: hidden;
+  }
+  .kpi::after {
+    content: ''; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--brand);
+  }
+  .kpi.ok::after    { background: var(--ok); }
+  .kpi.warn::after  { background: var(--warn); }
+  .kpi.info::after  { background: var(--info); }
+  .kpi-label { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-soft); }
+  .kpi-value { font-size: 30px; font-weight: 760; line-height: 1.15; margin-top: 4px; }
+  .kpi-foot { font-size: 12.5px; color: var(--text-soft); margin-top: 2px; }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+  .field { display: grid; gap: 5px; min-width: 150px; flex: 1 1 160px; }
+  .field label { font-size: 12px; font-weight: 600; color: var(--text-soft); }
+  input, select, textarea {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--surface-2); color: var(--text); outline: none; transition: .15s;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); background: var(--surface);
+  }
+  textarea { resize: vertical; min-height: 74px; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 10px 16px; border-radius: var(--radius-sm); border: 1px solid transparent;
+    background: var(--brand); color: #fff; font-weight: 640; cursor: pointer; transition: .16s;
+    white-space: nowrap;
+  }
+  .btn:hover { background: var(--brand-dark); transform: translateY(-1px); }
+  .btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+  .btn.ghost { background: transparent; border-color: var(--border); color: var(--text); }
+  .btn.ghost:hover { background: var(--surface-2); }
+  .btn.ok { background: var(--ok); }
+  .btn.warnb { background: var(--warn); }
+  .btn.danger { background: var(--danger); }
+  .btn.sm { padding: 6px 11px; font-size: 13px; border-radius: 7px; }
+  .btn.block { width: 100%; }
+  .icon-btn {
+    width: 38px; height: 38px; display: grid; place-items: center; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--surface); cursor: pointer;
+  }
+  .icon-btn:hover { background: var(--surface-2); }
+
+  /* Tablas */
+  .table-wrap { overflow-x: auto; min-width: 0; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  thead th {
+    position: sticky; top: 0; background: var(--surface-2); text-align: left;
+    padding: 11px 12px; font-size: 11.5px; letter-spacing: .05em; text-transform: uppercase;
+    color: var(--text-soft); border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  tbody td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:hover { background: var(--surface-2); }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .empty { padding: 34px; text-align: center; color: var(--text-soft); }
+
+  /* Badges de estado */
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px;
+    font-size: 11.5px; font-weight: 680; white-space: nowrap;
+  }
+  .badge.disponible   { background: var(--ok-soft);    color: var(--ok); }
+  .badge.traslado     { background: var(--warn-soft);  color: var(--warn); }
+  .badge.consignacion { background: var(--info-soft);  color: var(--info); }
+  .badge.test         { background: var(--brand-soft); color: var(--brand); }
+  .badge.neutro       { background: var(--surface-2);  color: var(--text-soft); border: 1px solid var(--border); }
+  .badge.rojo         { background: var(--danger-soft); color: var(--danger); }
+  .badge.tvs          { background: var(--brand-soft); color: var(--brand); }
+  .badge.mobility     { background: var(--info-soft);  color: var(--info); }
+
+  /* Gráficos CSS (sin librerías externas) */
+  .bars { display: grid; gap: 10px; }
+  .bar-row { display: grid; grid-template-columns: minmax(96px, 30%) 1fr auto; align-items: center; gap: 10px; }
+  .bar-label { font-size: 12.5px; color: var(--text-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar-track { display: block; background: var(--surface-2); border-radius: 999px; height: 12px; overflow: hidden; }
+  .bar-fill {
+    /* `display:block` es obligatorio: el relleno es un <span> y, al no ser hijo
+       directo de un contenedor flex/grid, sin esto quedaría inline y width/height
+       no tendrían efecto (la barra se vería vacía). */
+    display: block; height: 100%; border-radius: 999px;
+    background: linear-gradient(90deg, var(--brand), #f97316);
+    transition: width .5s cubic-bezier(.2,.8,.2,1);
+  }
+  .bar-fill.azul { background: linear-gradient(90deg, var(--info), #06b6d4); }
+  .bar-value { font-size: 12.5px; font-weight: 700; min-width: 34px; text-align: right; }
+
+  /* Modal */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(8, 12, 20, .55); backdrop-filter: blur(3px);
+    display: grid; place-items: center; padding: 18px; z-index: 80;
+  }
+  .modal {
+    width: min(100%, 560px); max-height: 90vh; overflow-y: auto; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow-lg); padding: 22px;
+  }
+  .modal h3 { font-size: 17px; margin-bottom: 4px; }
+  .form-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); margin-top: 16px; }
+  .form-grid .full { grid-column: 1 / -1; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; flex-wrap: wrap; }
+
+  /* Toasts */
+  .toasts { position: fixed; right: 16px; bottom: 16px; display: grid; gap: 10px; z-index: 120; }
+  .toast {
+    background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--info);
+    border-radius: 11px; box-shadow: var(--shadow-lg); padding: 12px 15px; min-width: 250px;
+    max-width: 340px; animation: slidein .2s ease;
+  }
+  .toast.ok { border-left-color: var(--ok); }
+  .toast.err { border-left-color: var(--danger); }
+  .toast.warn { border-left-color: var(--warn); }
+  .toast strong { display: block; font-size: 13.5px; }
+  .toast span { font-size: 12.5px; color: var(--text-soft); }
+  @keyframes slidein { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: none; } }
+
+  /* Loader */
+  .loader { display: inline-block; width: 15px; height: 15px; border: 2px solid rgba(255,255,255,.4);
+    border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
+  .loader.dark { border-color: var(--border); border-top-color: var(--brand); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .skeleton { height: 14px; border-radius: 6px; background: linear-gradient(90deg, var(--surface-2), var(--border), var(--surface-2));
+    background-size: 200% 100%; animation: shimmer 1.2s infinite; }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+
+  .grid-2 { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); }
+  .chip-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    border: 1px solid var(--border); background: var(--surface-2); border-radius: 999px;
+    padding: 5px 12px; font-size: 12.5px; cursor: pointer; transition: .15s;
+  }
+  .chip.active { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 640; }
+
+  /* ---------- 6. RESPONSIVE -------------------------------------------- */
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar {
+      position: fixed; inset: 0 auto 0 0; width: 82vw; max-width: 300px; z-index: 90;
+      transform: translateX(-100%); transition: transform .22s ease; box-shadow: var(--shadow-lg);
+    }
+    .sidebar.open { transform: none; }
+    .menu-toggle { display: grid; }
+    .content { padding: 14px; }
+    .topbar { padding: 12px 14px; }
+    .kpi-value { font-size: 25px; }
+    table { font-size: 12.8px; }
+    thead th, tbody td { padding: 9px 10px; }
+  }
+  @media (max-width: 520px) {
+    .toolbar .field { flex: 1 1 100%; }
+    .modal { padding: 18px; }
+    .toasts { left: 12px; right: 12px; }
+    .toast { max-width: none; }
+  }
+  @media print {
+    .sidebar, .topbar, .toolbar, .btn { display: none !important; }
+    .app { grid-template-columns: 1fr; }
+    .card { box-shadow: none; border-color: #ccc; }
+  }
+</style>
+
+</head>
+
+<body data-theme="light">
+
+<!-- ==================================================================== -->
+<!-- VISTA 1 · LOGIN                                                       -->
+<!-- ==================================================================== -->
+<section id="loginView" class="login-wrap">
+  <form class="login-card" id="loginForm" autocomplete="on">
+    <div class="brand-mark">
+      <div class="brand-logo">N</div>
+      <div>
+        <div class="brand-name">Nechimotos</div>
+        <div class="brand-sub">CRM · Inventarios y Ventas · 27 PDV</div>
+      </div>
+    </div>
+
+    <div class="field" style="margin-bottom:12px">
+      <label for="inpUsuario">Usuario</label>
+      <input id="inpUsuario" name="username" type="text" autocomplete="username"
+             placeholder="nombre.apellido" required>
+    </div>
+    <div class="field" style="margin-bottom:18px">
+      <label for="inpPassword">Contraseña</label>
+      <input id="inpPassword" name="password" type="password" autocomplete="current-password"
+             placeholder="••••••••" required>
+    </div>
+
+    <button class="btn block" id="btnLogin" type="submit">Ingresar</button>
+    <p class="muted" id="loginMsg" style="margin:14px 0 0;text-align:center"></p>
+    <p class="muted" style="margin:16px 0 0;text-align:center;font-size:11.5px">
+      Acceso controlado y auditado. Toda operación queda registrada.
+    </p>
+  </form>
+</section>
+
+<!-- ==================================================================== -->
+<!-- VISTA 2 · APLICACIÓN                                                  -->
+<!-- ==================================================================== -->
+<div id="appView" class="app" hidden>
+
+  <!-- ------------------------- NAVEGACIÓN LATERAL -------------------- -->
+  <aside class="sidebar" id="sidebar">
+    <div class="side-head">
+      <div class="brand-logo" style="width:38px;height:38px;font-size:16px">N</div>
+      <div>
+        <div class="brand-name" style="font-size:15.5px">Nechimotos</div>
+        <div class="brand-sub" id="sideCtx">—</div>
+      </div>
+    </div>
+
+    <button class="nav-btn active" data-view="dashboard"><span class="ico">▦</span> Dashboard</button>
+    <button class="nav-btn" data-view="inventario"><span class="ico">▤</span> Inventario</button>
+    <button class="nav-btn" data-view="traslados">
+      <span class="ico">⇄</span> Traslados <span class="nav-badge" id="badgeTraslados" hidden>0</span>
+    </button>
+    <button class="nav-btn" data-view="ventas"><span class="ico">✓</span> Ventas</button>
+    <button class="nav-btn admin-only" data-view="reportes" hidden><span class="ico">◴</span> Reportes</button>
+    <button class="nav-btn admin-only" data-view="auditoria" hidden><span class="ico">☰</span> Auditoría</button>
+    <button class="nav-btn admin-only" data-view="usuarios" hidden><span class="ico">♟</span> Usuarios</button>
+
+    <div class="side-foot">
+      <div class="muted" style="padding:0 6px 8px">
+        <strong id="sideUsuario" style="color:var(--text)">—</strong><br>
+        <span id="sideRol">—</span>
+      </div>
+      <button class="nav-btn" id="btnPassword"><span class="ico">⚿</span> Cambiar contraseña</button>
+      <button class="nav-btn" id="btnLogout"><span class="ico">⏻</span> Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <!-- ------------------------------ PRINCIPAL ------------------------- -->
+  <main class="main">
+    <header class="topbar">
+      <button class="icon-btn menu-toggle" id="btnMenu" aria-label="Abrir menú">☰</button>
+      <h1 id="viewTitle">Dashboard</h1>
+      <span class="spacer"></span>
+      <span class="badge neutro" id="chipPdv">—</span>
+      <button class="icon-btn" id="btnTema" title="Cambiar tema">◐</button>
+      <button class="icon-btn" id="btnRefrescar" title="Actualizar datos">⟳</button>
+    </header>
+
+    <div class="content">
+
+      <!-- ============ DASHBOARD ============ -->
+      <section class="view" id="view-dashboard">
+        <div class="kpi-grid" id="kpiGrid"></div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head"><h3>Traslados pendientes de confirmar</h3></div>
+            <div class="table-wrap"><table>
+              <thead><tr><th>Chasis</th><th>Origen</th><th>Días</th><th></th></tr></thead>
+              <tbody id="tbodyDashTraslados"></tbody>
+            </table></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Mayor permanencia en sala</h3></div>
+            <div class="table-wrap"><table>
+              <thead><tr><th>Chasis</th><th>Línea</th><th class="num">Días</th></tr></thead>
+              <tbody id="tbodyDashAntiguos"></tbody>
+            </table></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ INVENTARIO ============ -->
+      <section class="view" id="view-inventario" hidden>
+        <div class="card">
+          <div class="card-head">
+            <h3>Stock activo</h3><span class="spacer"></span>
+            <button class="btn sm" id="btnNuevaUnidad">＋ Ingresar unidad</button>
+          </div>
+          <div class="toolbar">
+            <div class="field"><label>Buscar (chasis, motor, línea)</label>
+              <input id="fInvTexto" type="search" placeholder="Ej: MD625..."></div>
+            <div class="field"><label>PDV</label><select id="fInvPdv"></select></div>
+            <div class="field"><label>Marca</label><select id="fInvMarca"></select></div>
+            <div class="field"><label>Estado</label><select id="fInvEstado"></select></div>
+            <button class="btn ghost" id="btnFiltrarInv">Filtrar</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h3 id="invCount">0 unidades</h3><span class="spacer"></span>
+            <span class="muted">Ordenado por días en sala (mayor a menor)</span>
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr>
+              <th>Chasis (VIN)</th><th>Marca</th><th>Línea / Modelo</th><th>Color</th>
+              <th>PDV actual</th><th>Estado</th><th class="num">Días sala</th><th>Acciones</th>
+            </tr></thead>
+            <tbody id="tbodyInventario"></tbody>
+          </table></div>
+        </div>
+      </section>
+
+      <!-- ============ TRASLADOS ============ -->
+      <section class="view" id="view-traslados" hidden>
+        <div class="card">
+          <div class="card-head">
+            <h3>Pendientes de confirmar recepción</h3><span class="spacer"></span>
+            <span class="muted">Paso 2 del protocolo</span>
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr>
+              <th>ID</th><th>Chasis</th><th>Origen</th><th>Destino</th>
+              <th>Despachó</th><th>Fecha despacho</th><th class="num">Días</th><th>Acción</th>
+            </tr></thead>
+            <tbody id="tbodyEntrantes"></tbody>
+          </table></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>Despachados desde mi punto (en tránsito)</h3></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>ID</th><th>Chasis</th><th>Destino</th><th>Fecha despacho</th><th class="num">Días</th><th>Acción</th></tr></thead>
+            <tbody id="tbodySalientes"></tbody>
+          </table></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>Histórico de traslados</h3></div>
+          <div class="table-wrap"><table>
+            <thead><tr>
+              <th>ID</th><th>Chasis</th><th>Origen</th><th>Destino</th>
+              <th>Despacho</th><th>Recepción</th><th>Estado</th>
+            </tr></thead>
+            <tbody id="tbodyHistTraslados"></tbody>
+          </table></div>
+        </div>
+      </section>
+
+      <!-- ============ VENTAS ============ -->
+      <section class="view" id="view-ventas" hidden>
+        <div class="card">
+          <div class="card-head"><h3>Histórico de facturación</h3><span class="spacer"></span>
+            <button class="btn ghost sm admin-only" id="btnExportarVentas" hidden>⬇ Exportar CSV</button>
+          </div>
+          <div class="toolbar">
+            <div class="field"><label>Mes (YYYY-MM)</label><input id="fVenMes" type="month"></div>
+            <div class="field"><label>Semana</label><select id="fVenSemana">
+              <option value="">Todas</option><option>Semana 1</option><option>Semana 2</option>
+              <option>Semana 3</option><option>Semana 4</option><option>Semana 5</option>
+            </select></div>
+            <div class="field"><label>PDV</label><select id="fVenPdv"></select></div>
+            <div class="field"><label>Marca</label><select id="fVenMarca"></select></div>
+            <div class="field"><label>Buscar</label><input id="fVenTexto" type="search" placeholder="Chasis, asesor..."></div>
+            <button class="btn ghost" id="btnFiltrarVentas">Filtrar</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3 id="venCount">0 ventas</h3></div>
+          <div class="table-wrap"><table>
+            <thead><tr>
+              <th>ID venta</th><th>Fecha</th><th>Mes</th><th>Semana</th><th>Chasis</th>
+              <th>Marca</th><th>Línea</th><th>PDV</th><th>Asesor</th><th>Tipo</th><th class="num">Días sala</th>
+            </tr></thead>
+            <tbody id="tbodyVentas"></tbody>
+          </table></div>
+        </div>
+      </section>
+
+      <!-- ============ REPORTES (ADMIN / AUXILIAR) ============ -->
+      <section class="view" id="view-reportes" hidden>
+        <div class="card">
+          <div class="card-head"><h3>Filtros del reporte ejecutivo</h3></div>
+          <div class="toolbar">
+            <div class="field"><label>Año</label><select id="fRepAno"><option value="">Todos</option></select></div>
+            <div class="field"><label>Mes</label><input id="fRepMes" type="month"></div>
+            <div class="field"><label>Semana</label><select id="fRepSemana">
+              <option value="">Todas</option><option>Semana 1</option><option>Semana 2</option>
+              <option>Semana 3</option><option>Semana 4</option><option>Semana 5</option>
+            </select></div>
+            <div class="field"><label>PDV</label><select id="fRepPdv"></select></div>
+            <div class="field"><label>Marca</label><select id="fRepMarca"></select></div>
+            <button class="btn" id="btnGenerarReporte">Generar</button>
+          </div>
+        </div>
+
+        <div class="kpi-grid" id="repKpis"></div>
+
+        <div class="grid-2">
+          <div class="card"><div class="card-head"><h3>Ventas por mes</h3></div><div class="bars" id="chartMes"></div></div>
+          <div class="card"><div class="card-head"><h3>Ventas por semana del mes</h3></div><div class="bars" id="chartSemana"></div></div>
+          <div class="card"><div class="card-head"><h3>Ranking de puntos de venta</h3></div><div class="bars" id="chartPdv"></div></div>
+          <div class="card"><div class="card-head"><h3>Participación por marca</h3></div><div class="bars" id="chartMarca"></div></div>
+          <div class="card"><div class="card-head"><h3>Top líneas vendidas</h3></div><div class="bars" id="chartLinea"></div></div>
+          <div class="card"><div class="card-head"><h3>Top asesores</h3></div><div class="bars" id="chartAsesor"></div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>Matriz PDV × Semana</h3><span class="spacer"></span>
+            <span class="muted" id="matrizMes">—</span></div>
+          <div class="table-wrap"><table id="tablaMatriz">
+            <thead><tr><th>PDV</th><th class="num">S1</th><th class="num">S2</th><th class="num">S3</th>
+              <th class="num">S4</th><th class="num">S5</th><th class="num">Total</th></tr></thead>
+            <tbody id="tbodyMatriz"></tbody>
+          </table></div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head"><h3>Traslados sin confirmar (+3 días)</h3></div>
+            <div class="table-wrap"><table>
+              <thead><tr><th>ID</th><th>Chasis</th><th>Origen → Destino</th><th class="num">Días</th></tr></thead>
+              <tbody id="tbodyAlertaTraslados"></tbody>
+            </table></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Inventario con +90 días</h3></div>
+            <div class="table-wrap"><table>
+              <thead><tr><th>Chasis</th><th>Línea</th><th>PDV</th><th class="num">Días</th></tr></thead>
+              <tbody id="tbodyAlertaStock"></tbody>
+            </table></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Puntos sin ventas este mes</h3></div>
+            <div class="chip-row" id="chipsPdvSinVentas"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ AUDITORÍA (ADMIN / AUXILIAR) ============ -->
+      <section class="view" id="view-auditoria" hidden>
+        <div class="card">
+          <div class="card-head"><h3>Bitácora de trazabilidad</h3></div>
+          <div class="toolbar">
+            <div class="field"><label>Usuario</label><input id="fAudUsuario" type="search" placeholder="Usuario"></div>
+            <div class="field"><label>Acción</label><input id="fAudAccion" type="search" placeholder="VENTA, LOGIN..."></div>
+            <div class="field"><label>Desde</label><input id="fAudDesde" type="date"></div>
+            <div class="field"><label>Hasta</label><input id="fAudHasta" type="date"></div>
+            <button class="btn ghost" id="btnFiltrarAud">Consultar</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="table-wrap"><table>
+            <thead><tr><th>Timestamp</th><th>Usuario</th><th>Rol</th><th>PDV</th>
+              <th>Acción</th><th>Chasis</th><th>Detalle</th></tr></thead>
+            <tbody id="tbodyAuditoria"></tbody>
+          </table></div>
+        </div>
+      </section>
+
+      <!-- ============ USUARIOS (ADMIN) ============ -->
+      <section class="view" id="view-usuarios" hidden>
+        <div class="card">
+          <div class="card-head"><h3>Cuentas del sistema</h3><span class="spacer"></span>
+            <button class="btn sm" id="btnNuevoUsuario">＋ Crear usuario</button></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>ID</th><th>Usuario</th><th>Rol</th><th>PDV asignado</th>
+              <th>Marca</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody id="tbodyUsuarios"></tbody>
+          </table></div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<!-- Contenedor de modales y notificaciones -->
+<div id="modalHost"></div>
+<div class="toasts" id="toasts"></div>
+
+<!-- Controladores cliente -->
+<script>
+/**
+ * ============================================================================
+ *  DEMO · mock-appsscript.js
+ * ----------------------------------------------------------------------------
+ *  Dobles de prueba de los servicios de Google para ejecutar el backend `.gs`
+ *  dentro del navegador, SIN Google Sheets y SIN conexión.
+ *
+ *  Sirve únicamente para mostrar la aplicación: los datos viven en memoria y
+ *  se pierden al recargar. En producción estos objetos los provee Apps Script.
+ * ============================================================================
+ */
+(function (global) {
+
+  /* ---------- SHA-256 síncrono (Utilities.computeDigest) ---------------- */
+  var K = [
+    0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+    0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+    0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+    0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+    0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+    0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+    0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+    0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+
+  function sha256Bytes(texto) {
+    var msg = new TextEncoder().encode(texto);
+    var len = msg.length, bitLen = len * 8;
+    var withPad = new Uint8Array((((len + 9) >> 6) + 1) << 6);
+    withPad.set(msg); withPad[len] = 0x80;
+    new DataView(withPad.buffer).setUint32(withPad.length - 4, bitLen >>> 0);
+    var H = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+    var w = new Uint32Array(64), dv = new DataView(withPad.buffer);
+    var rr = (x, n) => (x >>> n) | (x << (32 - n));
+    for (var off = 0; off < withPad.length; off += 64) {
+      for (var i = 0; i < 16; i++) w[i] = dv.getUint32(off + i * 4);
+      for (i = 16; i < 64; i++) {
+        var s0 = rr(w[i-15],7) ^ rr(w[i-15],18) ^ (w[i-15] >>> 3);
+        var s1 = rr(w[i-2],17) ^ rr(w[i-2],19) ^ (w[i-2] >>> 10);
+        w[i] = (w[i-16] + s0 + w[i-7] + s1) >>> 0;
+      }
+      var a=H[0],b=H[1],c=H[2],d=H[3],e=H[4],f=H[5],g=H[6],h=H[7];
+      for (i = 0; i < 64; i++) {
+        var S1 = rr(e,6) ^ rr(e,11) ^ rr(e,25);
+        var ch = (e & f) ^ (~e & g);
+        var t1 = (h + S1 + ch + K[i] + w[i]) >>> 0;
+        var S0 = rr(a,2) ^ rr(a,13) ^ rr(a,22);
+        var maj = (a & b) ^ (a & c) ^ (b & c);
+        var t2 = (S0 + maj) >>> 0;
+        h=g; g=f; f=e; e=(d+t1)>>>0; d=c; c=b; b=a; a=(t1+t2)>>>0;
+      }
+      H[0]=(H[0]+a)>>>0; H[1]=(H[1]+b)>>>0; H[2]=(H[2]+c)>>>0; H[3]=(H[3]+d)>>>0;
+      H[4]=(H[4]+e)>>>0; H[5]=(H[5]+f)>>>0; H[6]=(H[6]+g)>>>0; H[7]=(H[7]+h)>>>0;
+    }
+    var out = [];
+    H.forEach(function (x) {
+      [24,16,8,0].forEach(function (s) {
+        var b = (x >>> s) & 0xff;
+        out.push(b > 127 ? b - 256 : b); // Apps Script devuelve bytes con signo
+      });
+    });
+    return out;
+  }
+
+  /* ---------- Hoja de cálculo en memoria -------------------------------- */
+  function FakeRange(sheet, r, c, nr, nc) {
+    this.getValues = function () {
+      var out = [];
+      for (var i = 0; i < nr; i++) {
+        var row = sheet._rows[r - 1 + i] || [];
+        var linea = [];
+        for (var j = 0; j < nc; j++) linea.push(row[c - 1 + j] === undefined ? '' : row[c - 1 + j]);
+        out.push(linea);
+      }
+      return out;
+    };
+    this.setValues = function (v) {
+      v.forEach(function (row, i) { row.forEach(function (val, j) { sheet._set(r + i, c + j, val); }); });
+      return this;
+    };
+    this.setValue = function (v) { sheet._set(r, c, v); return this; };
+    ['setFontWeight','setBackground','setFontColor','setNumberFormat','setDataValidation']
+      .forEach(m => { this[m] = () => this; });
+  }
+  function FakeSheet(name) {
+    this._rows = [];
+    this.getName = () => name;
+    this._set = (r, c, v) => { while (this._rows.length < r) this._rows.push([]); this._rows[r-1][c-1] = v; };
+    this.getLastRow = () => this._rows.length;
+    this.getRange = (r, c, nr, nc) => new FakeRange(this, r, c, nr || 1, nc || 1);
+    this.appendRow = vals => { this._rows.push(vals.slice()); };
+    this.deleteRow = r => { this._rows.splice(r - 1, 1); };
+    this.setFrozenRows = () => {}; this.autoResizeColumns = () => {};
+  }
+  var hojas = {};
+  var SS = {
+    getSheetByName: n => hojas[n] || null,
+    insertSheet: n => (hojas[n] = new FakeSheet(n)),
+    getSheets: () => Object.keys(hojas).map(k => hojas[k]),
+    deleteSheet: sh => { delete hojas[sh.getName()]; },
+    setSpreadsheetTimeZone: () => {}, getId: () => 'DEMO', getUrl: () => '#'
+  };
+
+  global.SpreadsheetApp = {
+    openById: () => SS, create: () => SS, flush: () => {},
+    newDataValidation: () => ({ requireValueInList() { return this; },
+      setAllowInvalid() { return this; }, build() { return {}; } })
+  };
+
+  var props = {}, cache = {};
+  global.PropertiesService = { getScriptProperties: () => ({
+    getProperty: k => (props[k] === undefined ? null : props[k]),
+    setProperty: (k, v) => { props[k] = v; } }) };
+  global.CacheService = { getScriptCache: () => ({
+    get: k => (cache[k] === undefined ? null : cache[k]),
+    put: (k, v) => { cache[k] = v; }, remove: k => { delete cache[k]; } }) };
+  global.LockService = { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) };
+
+  function uuid() {
+    return 'xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx'.replace(/[xy]/g, ch => {
+      var r = Math.random() * 16 | 0;
+      return (ch === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+  }
+  global.Utilities = {
+    DigestAlgorithm: { SHA_256: 'SHA_256' }, Charset: { UTF_8: 'UTF_8' },
+    computeDigest: (alg, texto) => sha256Bytes(texto),
+    getUuid: uuid,
+    base64Encode: s => btoa(unescape(encodeURIComponent(s))),
+    formatDate: function (d, tz, fmt) {
+      var p = n => String(n).padStart(2, '0');
+      return fmt.replace('yyyy', d.getFullYear()).replace('MM', p(d.getMonth() + 1))
+        .replace('dd', p(d.getDate())).replace('HH', p(d.getHours()))
+        .replace('mm', p(d.getMinutes())).replace('ss', p(d.getSeconds()))
+        .replace('yy', String(d.getFullYear()).slice(2));
+    }
+  };
+  global.Logger = { log: function () { console.log.apply(console, arguments); } };
+  global.HtmlService = { createTemplateFromFile: () => ({ evaluate: () => ({}) }) };
+
+  /* ---------- Shim de google.script.run --------------------------------- */
+  function Runner() { this._ok = null; this._err = null; }
+  Runner.prototype.withSuccessHandler = function (f) { this._ok = f; return this; };
+  Runner.prototype.withFailureHandler = function (f) { this._err = f; return this; };
+  global.google = { script: { run: new Proxy(new Runner(), {
+    get: function (target, prop) {
+      if (prop in target) return target[prop];
+      if (typeof global[prop] !== 'function') return undefined;
+      return function () {
+        var args = Array.prototype.slice.call(arguments), self = target;
+        var ok = self._ok, err = self._err;
+        self._ok = null; self._err = null;
+        // Latencia simulada para que se vean los estados de carga reales.
+        setTimeout(function () {
+          try { if (ok) ok(global[prop].apply(null, args)); }
+          catch (e) { if (err) err(e); else console.error(e); }
+        }, 180);
+      };
+    }
+  }) } };
+
+  /* ---------- Datos de demostración ------------------------------------- */
+  global.sembrarDemo = function () {
+    instalarNechimotos();
+    crearAdminInicial();
+
+    var cuentas = [
+      ['asesor.majagual', 'MAJAGUAL', 'TODAS'],
+      ['asesor.montelibano', 'MONTELIBANO TVS', 'TVS'],
+      ['asesor.banco', 'BANCO MOBILITY', 'MOBILITY'],
+      ['coordinador', null, null]
+    ];
+    var admToken = login('admin.nechimotos', 'CambiarEstaClave2026*').data.token;
+    cuentas.forEach(function (c) {
+      crearUsuario(admToken, {
+        usuario: c[0], password: 'Demo12345',
+        rol: c[1] ? 'ASESOR_PDV' : 'AUXILIAR',
+        pdv: c[1] || 'RED NACIONAL', marca: c[2] || 'TODAS'
+      });
+    });
+
+    // Inventario repartido por la red, con antigüedades distintas.
+    var unidades = [
+      ['MD625TVS0000001','TVS','Apache RTR 160 4V','Rojo','MAJAGUAL',12],
+      ['MD625TVS0000002','TVS','NTORQ 125 XConnect','Negro','MAJAGUAL',48],
+      ['MD625TVS0000003','TVS','Raider 125 FI','Azul','MONTELIBANO TVS',95],
+      ['MD625TVS0000004','TVS','Sport 100 ELS','Negro','MONTELIBANO TVS',7],
+      ['MD625TVS0000005','TVS','Stryker 125 NG','Gris','MAGANGUE 1',63],
+      ['MD625TVS0000006','TVS','Neo NX 110','Rojo','SAN MARCOS',21],
+      ['9C2MOB00000001','AUTECO MOBILITY','MRX 150','Blanco','BANCO MOBILITY',30],
+      ['9C2MOB00000002','AUTECO MOBILITY','Agility Fusion','Azul','BANCO MOBILITY',110],
+      ['9C2MOB00000003','AUTECO MOBILITY','Bomber 150','Negro','MAJAGUAL',5],
+      ['9C2MOB00000004','AUTECO MOBILITY','Nitro 125','Rojo','CODAZZI',40],
+      ['9C2MOB00000005','AUTECO MOBILITY','Combat 125','Gris','CURUMANI',75],
+      ['9C2MOB00000006','AUTECO MOBILITY','Starker Electrica','Blanco','PELAYA',18]
+    ];
+    var hoy = new Date();
+    unidades.forEach(function (u) {
+      var ingreso = new Date(hoy.getTime() - u[5] * 86400000);
+      anexarFila_(SHEETS.INVENTARIO, {
+        Chasis_VIN: u[0], Motor: u[0].replace(/^..../, 'MOT'), Marca: u[1],
+        Linea_Modelo: u[2], Modelo_Ano: 2026, Color: u[3], Fecha_Ingreso: ingreso,
+        PDV_Actual: u[4], Estado: 'Disponible', Asesor_Asignado: 'Sin asignar',
+        Observacion: ''
+      });
+    });
+
+    // Ventas históricas de los últimos 3 meses (para que el reporte tenga series).
+    var lineasTvs = ['Apache RTR 160 4V','Raider 125 FI','NTORQ 125 XConnect','Sport 100 ELS'];
+    var lineasMob = ['MRX 150','Agility Fusion','Bomber 150','Nitro 125'];
+    var puntos = ['MAJAGUAL','MONTELIBANO TVS','BANCO MOBILITY','MAGANGUE 1','SAN MARCOS','CODAZZI','CURUMANI'];
+    var asesores = ['asesor.majagual','asesor.montelibano','asesor.banco','Luis Romero','Ana Pertuz'];
+    var tipos = ['Contado','Credito','Consignacion'];
+    for (var i = 0; i < 70; i++) {
+      var f = new Date(hoy.getTime() - Math.floor(Math.random() * 85) * 86400000);
+      var esTvs = Math.random() > 0.45;
+      var pdv = puntos[i % puntos.length];
+      if (esTvs && pdv === 'BANCO MOBILITY') pdv = 'MONTELIBANO TVS';
+      if (!esTvs && pdv === 'MONTELIBANO TVS') pdv = 'BANCO MOBILITY';
+      var dias = 5 + Math.floor(Math.random() * 80);
+      anexarFila_(SHEETS.VENTAS, {
+        ID_Venta: 'V-DEMO-' + (1000 + i),
+        Fecha_Venta: f,
+        Mes_Venta: Utilities.formatDate(f, TZ, 'yyyy-MM'),
+        Semana_Mes: calcularSemanaMes_(f),
+        Ano: f.getFullYear(),
+        Chasis_VIN: (esTvs ? 'MD625TVS' : '9C2MOB00') + (900000 + i),
+        Motor: 'MOT' + (900000 + i),
+        Marca: esTvs ? 'TVS' : 'AUTECO MOBILITY',
+        Linea_Modelo: esTvs ? lineasTvs[i % 4] : lineasMob[i % 4],
+        Modelo_Ano: 2025 + (i % 2),
+        Color: ['Rojo','Negro','Azul','Blanco'][i % 4],
+        Fecha_Ingreso: new Date(f.getTime() - dias * 86400000),
+        Dias_Totales_Sala: dias,
+        PDV_Venta: pdv,
+        Asesor_Vendedor: asesores[i % asesores.length],
+        Tipo_Venta: tipos[i % 3],
+        Observacion: 'Venta de demostración'
+      });
+    }
+
+    // Un traslado en tránsito, para poder probar el Paso 2 (recepción).
+    var tokMonte = login('asesor.montelibano', 'Demo12345').data.token;
+    despacharTraslado(tokMonte, {
+      vin: 'MD625TVS0000004', pdvDestino: 'MAJAGUAL',
+      observacion: 'Transportadora Coordinadora, guía 998877'
+    });
+    logout(tokMonte);
+  };
+
+})(window);
+
+/* ===== Config.gs ===== */
+/**
+ * ============================================================================
+ *  NECHIMOTOS CRM  ·  Config.gs
+ * ----------------------------------------------------------------------------
+ *  Variables globales del proyecto: ID del Spreadsheet maestro, nombres de
+ *  pestañas, esquemas de columnas, catálogos homologados (marcas, líneas y
+ *  puntos de venta) y parámetros de sesión.
+ *
+ *  Este archivo NO contiene lógica de negocio: solo constantes y helpers de
+ *  acceso a la hoja de cálculo que el resto de módulos reutiliza.
+ * ============================================================================
+ */
+
+/** Propiedad de script donde se guarda el ID del archivo maestro. */
+var PROP_SPREADSHEET_ID = 'SPREADSHEET_ID';
+
+/** Propiedad de script con el "pepper" criptográfico del hash de contraseñas. */
+var PROP_PEPPER = 'AUTH_PEPPER';
+
+/**
+ * ID del archivo `BaseDatos_Nechimotos_Master`.
+ * Se recomienda NO dejarlo escrito en el código: ejecute `instalarNechimotos()`
+ * (Setup.gs) que lo guarda en las Propiedades del Script. Si por alguna razón
+ * prefiere fijarlo aquí, reemplace la cadena vacía.
+ */
+var SPREADSHEET_ID_FALLBACK = '';
+
+/** Nombres de las 5 pestañas del archivo maestro. */
+var SHEETS = {
+  INVENTARIO: 'Inventario',
+  VENTAS:     'Ventas',
+  TRASLADOS:  'Traslados',
+  USUARIOS:   'Usuarios',
+  AUDITORIA:  'Auditoria'
+};
+
+/**
+ * Esquema de columnas (orden exacto de los encabezados de cada pestaña).
+ * Todo el código lee/escribe por nombre de columna usando estos arreglos, de
+ * modo que reordenar una columna en la hoja no rompe la aplicación siempre que
+ * el encabezado se mantenga igual.
+ */
+var COLUMNS = {
+  Inventario: [
+    'Chasis_VIN', 'Motor', 'Marca', 'Linea_Modelo', 'Modelo_Ano', 'Color',
+    'Fecha_Ingreso', 'PDV_Actual', 'Estado', 'Asesor_Asignado', 'Observacion'
+  ],
+  Ventas: [
+    'ID_Venta', 'Fecha_Venta', 'Mes_Venta', 'Semana_Mes', 'Ano', 'Chasis_VIN',
+    'Motor', 'Marca', 'Linea_Modelo', 'Modelo_Ano', 'Color', 'Fecha_Ingreso',
+    'Dias_Totales_Sala', 'PDV_Venta', 'Asesor_Vendedor', 'Tipo_Venta',
+    'Observacion'
+  ],
+  Traslados: [
+    'ID_Traslado', 'Fecha_Despacho', 'Fecha_Recepcion', 'Chasis_VIN',
+    'PDV_Origen', 'PDV_Destino', 'Usuario_Despacha', 'Usuario_Recibe',
+    'Estado_Traslado', 'Observacion'
+  ],
+  Usuarios: [
+    'ID_Usuario', 'Usuario', 'Password_Hash', 'Rol', 'PDV_Asignado',
+    'Marca_Permitida', 'Estado_Cuenta'
+  ],
+  Auditoria: [
+    'Timestamp', 'Usuario', 'Rol', 'PDV', 'Accion_Realizada',
+    'Chasis_Afectado', 'Detalle'
+  ]
+};
+
+/** Roles soportados por el control RBAC. */
+var ROLES = {
+  ADMIN:      'ADMIN',
+  AUXILIAR:   'AUXILIAR',
+  ASESOR_PDV: 'ASESOR_PDV'
+};
+
+/** Roles con visibilidad global (27 PDV + todas las marcas). */
+var ROLES_GLOBALES = [ROLES.ADMIN, ROLES.AUXILIAR];
+
+/** Marcas oficiales. `TODAS` es un comodín de permiso, no una marca real. */
+var MARCAS = {
+  TVS:      'TVS',
+  MOBILITY: 'AUTECO MOBILITY',
+  TODAS:    'TODAS'
+};
+
+/** Estados válidos de una unidad en inventario. */
+var ESTADOS_INVENTARIO = ['Disponible', 'En Traslado', 'Consignacion', 'Test Drive'];
+
+/** Estados válidos de la bitácora de traslados. */
+var ESTADOS_TRASLADO = { TRANSITO: 'En Transito', CONFIRMADO: 'Confirmado' };
+
+/** Tipos de venta permitidos. */
+var TIPOS_VENTA = ['Contado', 'Credito', 'Consignacion'];
+
+/** Estados de cuenta de usuario. */
+var ESTADOS_CUENTA = ['Activo', 'Inactivo'];
+
+/** Duración de la sesión (segundos). 4 horas de jornada comercial. */
+var SESSION_TTL_SEGUNDOS = 4 * 60 * 60;
+
+/** Intentos fallidos de login permitidos antes de bloqueo temporal. */
+var LOGIN_MAX_INTENTOS = 5;
+var LOGIN_BLOQUEO_SEGUNDOS = 10 * 60;
+
+/** Tiempo máximo de espera del LockService en operaciones críticas (ms). */
+var LOCK_TIMEOUT_MS = 20000;
+
+/* ===========================================================================
+ *  CATÁLOGO DE PUNTOS DE VENTA (27 PDV reales de la red Nechimotos)
+ * ---------------------------------------------------------------------------
+ *  `marcas` define qué marcas puede almacenar cada punto. Esta lista alimenta:
+ *   - el selector de PDV_Destino en traslados (solo se muestran puntos
+ *     autorizados para la marca de la motocicleta trasladada),
+ *   - el PDV_Asignado disponible al crear usuarios,
+ *   - los filtros de reportes de la jefatura comercial.
+ *
+ *  Puntos mixtos (acceso TODAS) manejan TVS y AUTECO MOBILITY. Montelíbano y
+ *  El Banco operan con vitrina separada por marca, por eso figuran como dos
+ *  puntos independientes y cada uno solo admite la suya.
+ *
+ *  El nombre aquí escrito es la llave: debe coincidir exactamente con el valor
+ *  de `PDV_Actual` en la pestaña Inventario y `PDV_Venta` en Ventas.
+ * =========================================================================== */
+var CATALOGO_PDV = [
+  { nombre: 'MAJAGUAL',              marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'NECHI',                 marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'SUCRE',                 marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'ZARAGOZA',              marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'PLANETA',               marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'GUARANDA',              marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'MONTELIBANO MOBILITY',  marcas: ['AUTECO MOBILITY'] },
+  { nombre: 'MONTELIBANO TVS',       marcas: ['TVS'] },
+  { nombre: 'PUERTO LIBERTADOR',     marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'SAN MARCOS',            marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'AYAPEL',                marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'LA APARTADA',           marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'SAN MARTIN',            marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'BANCO MOBILITY',        marcas: ['AUTECO MOBILITY'] },
+  { nombre: 'BANCO TVS',             marcas: ['TVS'] },
+  { nombre: 'CURUMANI',              marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'CHIRIGUANA',            marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'SANTA ANA',             marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'MAGANGUE 1',            marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'MAGANGUE 2',            marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'PAILITAS',              marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'PELAYA',                marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'ASTREA',                marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'GUAMAL',                marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'LA JAGUA',              marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'BECERRIL',              marcas: ['TVS', 'AUTECO MOBILITY'] },
+  { nombre: 'CODAZZI',               marcas: ['TVS', 'AUTECO MOBILITY'] }
+];
+
+/* ===========================================================================
+ *  CATÁLOGO DE LÍNEAS HOMOLOGADAS
+ * =========================================================================== */
+var CATALOGO_LINEAS = {
+  'TVS': [
+    'Sport 100 ELS', 'Sport 100 KLS', 'Sport 100 SP',
+    'Raider 125 Standard', 'Raider 125 FI', 'Raider 125 Racing', 'Raider 125 ACC',
+    'Stryker 125 NG', 'Stryker 125 Indo',
+    'Neo NX 110', 'Dazz 110',
+    'NTORQ 125 XC', 'NTORQ 125 XConnect',
+    'Apache RTR 160 4V', 'Apache RTR 180', 'Apache RTR 200 4V', 'Apache RTR 310',
+    'Motocarro King Pasajeros', 'Motocarro King GS+'
+  ],
+  'AUTECO MOBILITY': [
+    'MRX 125', 'MRX 150', 'MRX 200', 'MRX Arizona',
+    'Agility Fusion', 'Twist 125',
+    'One MP Facelift', 'One Mach 110',
+    'New Life 125', 'Advance R 125',
+    'Nitro 125', 'Nitro 151',
+    'Combat 100', 'Combat 125',
+    'Switch 125', 'Switch 150',
+    'Bomber 125', 'Bomber 150',
+    'Venom 14', 'Venom 18',
+    'Hunter 150', 'Tricargo 200', 'Ceronte 200',
+    'Benelli', 'KLX 150', 'Starker Electrica'
+  ]
+};
+
+/* ===========================================================================
+ *  HELPERS DE ACCESO AL SPREADSHEET
+ * =========================================================================== */
+
+/** Devuelve el ID del archivo maestro (Propiedades del Script o fallback). */
+function getSpreadsheetId_() {
+  var id = PropertiesService.getScriptProperties().getProperty(PROP_SPREADSHEET_ID);
+  if (!id) id = SPREADSHEET_ID_FALLBACK;
+  if (!id) {
+    throw new Error('No hay Spreadsheet configurado. Ejecute instalarNechimotos() una vez.');
+  }
+  return id;
+}
+
+/** Abre (y cachea por ejecución) el archivo maestro. */
+var _ssCache = null;
+function getSpreadsheet_() {
+  if (!_ssCache) _ssCache = SpreadsheetApp.openById(getSpreadsheetId_());
+  return _ssCache;
+}
+
+/** Obtiene una pestaña por nombre; lanza error si no existe. */
+function getSheet_(nombre) {
+  var sh = getSpreadsheet_().getSheetByName(nombre);
+  if (!sh) throw new Error('No existe la pestaña "' + nombre + '" en el archivo maestro.');
+  return sh;
+}
+
+/**
+ * Lee una pestaña completa y la devuelve como arreglo de objetos
+ * { fila: <número de fila real>, datos: { Columna: valor, ... } }.
+ * Trabajar con objetos evita índices mágicos en los servicios.
+ */
+function leerTabla_(nombreHoja) {
+  var sh = getSheet_(nombreHoja);
+  var ultima = sh.getLastRow();
+  var esquema = COLUMNS[nombreHoja];
+  if (ultima < 2) return { headers: esquema, filas: [] };
+
+  var valores = sh.getRange(1, 1, ultima, esquema.length).getValues();
+  var headers = valores[0].map(function (h) { return String(h).trim(); });
+  var filas = [];
+  for (var i = 1; i < valores.length; i++) {
+    var fila = valores[i];
+    // Ignora filas totalmente vacías (residuos de edición manual).
+    var vacia = fila.every(function (c) { return c === '' || c === null; });
+    if (vacia) continue;
+    var obj = {};
+    for (var c = 0; c < headers.length; c++) obj[headers[c]] = fila[c];
+    filas.push({ fila: i + 1, datos: obj });
+  }
+  return { headers: headers, filas: filas };
+}
+
+/** Convierte un objeto {columna: valor} en un arreglo ordenado según el esquema. */
+function objetoAFila_(nombreHoja, obj) {
+  return COLUMNS[nombreHoja].map(function (col) {
+    return obj[col] === undefined || obj[col] === null ? '' : obj[col];
+  });
+}
+
+/** Anexa una fila respetando el esquema de la pestaña. */
+function anexarFila_(nombreHoja, obj) {
+  getSheet_(nombreHoja).appendRow(objetoAFila_(nombreHoja, obj));
+}
+
+/** Devuelve el catálogo de PDV autorizados para una marca concreta. */
+function pdvsPorMarca_(marca) {
+  if (!marca || marca === MARCAS.TODAS) {
+    return CATALOGO_PDV.map(function (p) { return p.nombre; });
+  }
+  return CATALOGO_PDV.filter(function (p) {
+    return p.marcas.indexOf(marca) !== -1;
+  }).map(function (p) { return p.nombre; });
+}
+
+/** Normaliza texto para comparaciones robustas (sin espacios/mayúsculas). */
+function norm_(v) {
+  return String(v === null || v === undefined ? '' : v).trim().toUpperCase();
+}
+
+
+/* ===== Security.gs ===== */
+/**
+ * ============================================================================
+ *  NECHIMOTOS CRM  ·  Security.gs
+ * ----------------------------------------------------------------------------
+ *  Capa transversal de seguridad:
+ *   - Hash SHA-256 de contraseñas (Utilities.computeDigest) con salt por
+ *     usuario + pepper almacenado en Propiedades del Script.
+ *   - Emisión, validación y revocación de tokens de sesión (CacheService).
+ *   - Control RBAC y de segregación de marcas, SIEMPRE del lado servidor.
+ *   - Saneamiento de entradas provenientes del navegador.
+ *
+ *  Regla de oro: ninguna función pública de servicio confía en el rol, PDV o
+ *  marca enviados por el cliente. Esos datos se derivan del token de sesión.
+ * ============================================================================
+ */
+
+/** Prefijo de las claves de sesión en CacheService. */
+var CACHE_PREFIX_SESION = 'SES_';
+var CACHE_PREFIX_INTENTOS = 'TRY_';
+
+/** Obtiene (o crea) el pepper criptográfico global. */
+function getPepper_() {
+  var props = PropertiesService.getScriptProperties();
+  var pepper = props.getProperty(PROP_PEPPER);
+  if (!pepper) {
+    pepper = Utilities.base64Encode(
+      Utilities.getUuid() + '|' + new Date().getTime() + '|NECHIMOTOS'
+    );
+    props.setProperty(PROP_PEPPER, pepper);
+  }
+  return pepper;
+}
+
+/**
+ * Calcula el hash SHA-256 de una contraseña.
+ * Composición: SHA256( usuarioNormalizado + ':' + password + ':' + pepper )
+ * El usuario actúa como salt determinístico (dos usuarios con la misma clave
+ * producen hashes distintos) y el pepper vive fuera de la hoja de cálculo.
+ *
+ * @param {string} usuario  Nombre de usuario (login).
+ * @param {string} password Contraseña en texto plano.
+ * @return {string} Hash hexadecimal en minúsculas (64 caracteres).
+ */
+function hashPassword(usuario, password) {
+  var material = norm_(usuario) + ':' + String(password) + ':' + getPepper_();
+  var bytes = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256, material, Utilities.Charset.UTF_8
+  );
+  return bytes.map(function (b) {
+    var v = (b < 0 ? b + 256 : b).toString(16);
+    return v.length === 1 ? '0' + v : v;
+  }).join('');
+}
+
+/**
+ * Comparación de hashes en tiempo constante (evita ataques de temporización).
+ */
+function compararHash_(a, b) {
+  a = String(a || ''); b = String(b || '');
+  if (a.length !== b.length) return false;
+  var diff = 0;
+  for (var i = 0; i < a.length; i++) diff |= (a.charCodeAt(i) ^ b.charCodeAt(i));
+  return diff === 0;
+}
+
+/* ===========================================================================
+ *  SESIONES
+ * =========================================================================== */
+
+/**
+ * Crea una sesión en CacheService y devuelve el token opaco.
+ * El token es un UUID: no contiene información del usuario, por lo que no es
+ * manipulable desde el navegador.
+ */
+function crearSesion_(usuarioObj) {
+  var token = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
+  var payload = {
+    idUsuario: usuarioObj.ID_Usuario,
+    usuario:   usuarioObj.Usuario,
+    rol:       norm_(usuarioObj.Rol),
+    pdv:       String(usuarioObj.PDV_Asignado || '').trim(),
+    marca:     String(usuarioObj.Marca_Permitida || '').trim(),
+    inicio:    new Date().getTime()
+  };
+  CacheService.getScriptCache()
+    .put(CACHE_PREFIX_SESION + token, JSON.stringify(payload), SESSION_TTL_SEGUNDOS);
+  return token;
+}
+
+/**
+ * Valida un token y devuelve el contexto de sesión.
+ * Renueva el TTL en cada llamada (sesión deslizante).
+ *
+ * @throws {Error} si el token no existe o expiró.
+ */
+function validarSesion_(token) {
+  if (!token || typeof token !== 'string' || token.length < 30) {
+    throw new Error('SESION_INVALIDA');
+  }
+  var cache = CacheService.getScriptCache();
+  var raw = cache.get(CACHE_PREFIX_SESION + token);
+  if (!raw) throw new Error('SESION_INVALIDA');
+  var ses = JSON.parse(raw);
+  cache.put(CACHE_PREFIX_SESION + token, raw, SESSION_TTL_SEGUNDOS); // renovar
+  ses.token = token;
+  return ses;
+}
+
+/** Elimina la sesión del cache (logout). */
+function destruirSesion_(token) {
+  if (token) CacheService.getScriptCache().remove(CACHE_PREFIX_SESION + token);
+}
+
+/* ===========================================================================
+ *  RBAC
+ * =========================================================================== */
+
+/** true si el rol de la sesión tiene visibilidad global. */
+function esGlobal_(ses) {
+  return ROLES_GLOBALES.indexOf(ses.rol) !== -1;
+}
+
+/**
+ * Exige que la sesión tenga uno de los roles indicados.
+ * @param {Object} ses Contexto de sesión.
+ * @param {Array<string>} rolesPermitidos
+ */
+function exigirRol_(ses, rolesPermitidos) {
+  if (rolesPermitidos.indexOf(ses.rol) === -1) {
+    registrarAuditoria_(ses, 'ACCESO_DENEGADO', '',
+      'Rol ' + ses.rol + ' intentó una acción reservada a: ' + rolesPermitidos.join('/'));
+    throw new Error('PERMISO_DENEGADO: su rol no autoriza esta operación.');
+  }
+}
+
+/** Exige rol ADMIN o AUXILIAR (jefatura / coordinación). */
+function exigirGlobal_(ses) {
+  exigirRol_(ses, ROLES_GLOBALES);
+}
+
+/**
+ * ¿Puede la sesión ver/operar una unidad concreta?
+ * ADMIN y AUXILIAR: todo. ASESOR_PDV: solo su PDV y su marca permitida.
+ *
+ * @param {Object} ses   Contexto de sesión.
+ * @param {string} pdv   PDV de la unidad.
+ * @param {string} marca Marca de la unidad.
+ */
+function puedeVer_(ses, pdv, marca) {
+  if (esGlobal_(ses)) return true;
+  if (norm_(pdv) !== norm_(ses.pdv)) return false;
+  return marcaPermitida_(ses, marca);
+}
+
+/** ¿La marca de la unidad está dentro de la marca permitida del usuario? */
+function marcaPermitida_(ses, marca) {
+  if (esGlobal_(ses)) return true;
+  var permitida = norm_(ses.marca);
+  if (!permitida || permitida === norm_(MARCAS.TODAS)) return true;
+  var m = norm_(marca);
+  // 'MOBILITY' en la ficha del usuario habilita 'AUTECO MOBILITY' en inventario.
+  if (permitida === 'MOBILITY') return m.indexOf('MOBILITY') !== -1;
+  if (permitida === 'TVS') return m === 'TVS';
+  return m === permitida;
+}
+
+/**
+ * Igual que puedeVer_ pero lanzando excepción y dejando rastro en auditoría.
+ */
+function exigirAcceso_(ses, pdv, marca, accion, chasis) {
+  if (!puedeVer_(ses, pdv, marca)) {
+    registrarAuditoria_(ses, 'ACCESO_DENEGADO', chasis || '',
+      'Intento sobre PDV=' + pdv + ' Marca=' + marca + ' en accion=' + accion);
+    throw new Error('PERMISO_DENEGADO: la unidad no pertenece a su punto de venta o marca.');
+  }
+}
+
+/* ===========================================================================
+ *  SANEAMIENTO DE ENTRADAS
+ * =========================================================================== */
+
+/** Convierte a texto plano recortado y limita longitud (anti-inyección/ruido). */
+function limpiarTexto_(valor, maxLen) {
+  var s = String(valor === null || valor === undefined ? '' : valor);
+  s = s.replace(/[\u0000-\u001F\u007F]/g, '').trim();
+  return s.substring(0, maxLen || 200);
+}
+
+/** Valida y normaliza un número de chasis (VIN). */
+function limpiarVin_(valor) {
+  var s = limpiarTexto_(valor, 40).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (s.length < 5) throw new Error('DATO_INVALIDO: número de chasis (VIN) inválido.');
+  return s;
+}
+
+/** Exige que un valor pertenezca a una lista cerrada. */
+function exigirEnLista_(valor, lista, etiqueta) {
+  var v = limpiarTexto_(valor, 60);
+  for (var i = 0; i < lista.length; i++) {
+    if (norm_(lista[i]) === norm_(v)) return lista[i];
+  }
+  throw new Error('DATO_INVALIDO: ' + etiqueta + ' no válido (' + v + ').');
+}
+
+/* ===========================================================================
+ *  CONTROL DE FUERZA BRUTA EN LOGIN
+ * =========================================================================== */
+
+function intentosFallidos_(usuario) {
+  var v = CacheService.getScriptCache().get(CACHE_PREFIX_INTENTOS + norm_(usuario));
+  return v ? parseInt(v, 10) : 0;
+}
+
+function sumarIntentoFallido_(usuario) {
+  var n = intentosFallidos_(usuario) + 1;
+  CacheService.getScriptCache()
+    .put(CACHE_PREFIX_INTENTOS + norm_(usuario), String(n), LOGIN_BLOQUEO_SEGUNDOS);
+  return n;
+}
+
+function limpiarIntentos_(usuario) {
+  CacheService.getScriptCache().remove(CACHE_PREFIX_INTENTOS + norm_(usuario));
+}
+
+
+/* ===== Logger.gs ===== */
+/**
+ * ============================================================================
+ *  NECHIMOTOS CRM  ·  Logger.gs
+ * ----------------------------------------------------------------------------
+ *  Bitácora inmutable de trazabilidad (pestaña `Auditoria`).
+ *  Toda acción sensible (login, logout, venta, despacho, recepción, cambios de
+ *  estado, accesos denegados y errores) genera una fila con:
+ *  Timestamp | Usuario | Rol | PDV | Accion_Realizada | Chasis_Afectado | Detalle
+ *
+ *  El registro nunca debe interrumpir la operación: si la escritura falla, el
+ *  error se envía a Stackdriver (console.error) pero no se propaga.
+ * ============================================================================
+ */
+
+/**
+ * Registra una acción en la pestaña `Auditoria`.
+ *
+ * @param {Object|null} ses    Contexto de sesión (puede ser null en pre-login).
+ * @param {string} accion      Verbo de la acción (ej. 'VENTA_REGISTRADA').
+ * @param {string} chasis      VIN afectado, o cadena vacía.
+ * @param {string} detalle     Detalle técnico legible.
+ */
+function registrarAuditoria_(ses, accion, chasis, detalle) {
+  try {
+    anexarFila_(SHEETS.AUDITORIA, {
+      Timestamp:        new Date(),
+      Usuario:          ses && ses.usuario ? ses.usuario : 'ANONIMO',
+      Rol:              ses && ses.rol ? ses.rol : 'N/A',
+      PDV:              ses && ses.pdv ? ses.pdv : 'N/A',
+      Accion_Realizada: limpiarTexto_(accion, 60),
+      Chasis_Afectado:  limpiarTexto_(chasis, 40),
+      Detalle:          limpiarTexto_(detalle, 900)
+    });
+  } catch (e) {
+    console.error('Auditoria falló: ' + e.message + ' | accion=' + accion);
+  }
+}
+
+/**
+ * Variante para eventos previos a la sesión (intentos de login).
+ * @param {string} usuario Usuario declarado en el formulario.
+ */
+function registrarAuditoriaAnonima_(usuario, accion, detalle) {
+  registrarAuditoria_(
+    { usuario: limpiarTexto_(usuario, 60) || 'ANONIMO', rol: 'N/A', pdv: 'N/A' },
+    accion, '', detalle
+  );
+}
+
+/**
+ * Consulta paginada de auditoría para el panel de ADMIN.
+ * Devuelve los registros más recientes primero.
+ *
+ * @param {string} token  Token de sesión.
+ * @param {Object} filtro { usuario, accion, desde, hasta, limite }
+ */
+function consultarAuditoria(token, filtro) {
+  return ejecutarSeguro_(function () {
+    var ses = validarSesion_(token);
+    exigirGlobal_(ses); // solo jefatura y coordinación
+    filtro = filtro || {};
+    var limite = Math.min(parseInt(filtro.limite, 10) || 200, 1000);
+
+    var tabla = leerTabla_(SHEETS.AUDITORIA);
+    var desde = filtro.desde ? new Date(filtro.desde) : null;
+    var hasta = filtro.hasta ? new Date(filtro.hasta + 'T23:59:59') : null;
+    var fUsuario = norm_(filtro.usuario || '');
+    var fAccion  = norm_(filtro.accion || '');
+
+    var out = [];
+    for (var i = tabla.filas.length - 1; i >= 0 && out.length < limite; i--) {
+      var d = tabla.filas[i].datos;
+      var ts = d.Timestamp instanceof Date ? d.Timestamp : new Date(d.Timestamp);
+      if (desde && ts < desde) continue;
+      if (hasta && ts > hasta) continue;
+      if (fUsuario && norm_(d.Usuario).indexOf(fUsuario) === -1) continue;
+      if (fAccion && norm_(d.Accion_Realizada).indexOf(fAccion) === -1) continue;
+      out.push({
+        Timestamp: formatearFechaHora_(ts),
+        Usuario: d.Usuario,
+        Rol: d.Rol,
+        PDV: d.PDV,
+        Accion_Realizada: d.Accion_Realizada,
+        Chasis_Afectado: d.Chasis_Afectado,
+        Detalle: d.Detalle
+      });
+    }
+    return out;
+  });
+}
+
+/* ===========================================================================
+ *  UTILIDADES COMPARTIDAS DE FECHA / RESPUESTA
+ * =========================================================================== */
+
+/** Zona horaria operativa de Nechimotos. */
+var TZ = 'America/Bogota';
+
+/** Formatea una fecha como yyyy-MM-dd. */
+function formatearFecha_(fecha) {
+  if (!fecha) return '';
+  var d = (fecha instanceof Date) ? fecha : new Date(fecha);
+  if (isNaN(d.getTime())) return '';
+  return Utilities.formatDate(d, TZ, 'yyyy-MM-dd');
+}
+
+/** Formatea una fecha como yyyy-MM-dd HH:mm:ss. */
+function formatearFechaHora_(fecha) {
+  if (!fecha) return '';
+  var d = (fecha instanceof Date) ? fecha : new Date(fecha);
+  if (isNaN(d.getTime())) return '';
+  return Utilities.formatDate(d, TZ, 'yyyy-MM-dd HH:mm:ss');
+}
+
+/** Diferencia en días completos entre dos fechas (>= 0). */
+function diasEntre_(desde, hasta) {
+  if (!desde) return '';
+  var a = (desde instanceof Date) ? desde : new Date(desde);
+  var b = (hasta instanceof Date) ? hasta : new Date(hasta);
+  if (isNaN(a.getTime()) || isNaN(b.getTime())) return '';
+  var ms = new Date(b.getFullYear(), b.getMonth(), b.getDate()) -
+           new Date(a.getFullYear(), a.getMonth(), a.getDate());
+  return Math.max(0, Math.round(ms / 86400000));
+}
+
+/**
+ * Envoltura estándar de todas las funciones expuestas a `google.script.run`.
+ * Normaliza la respuesta a { ok: boolean, data|error } para que el frontend
+ * nunca reciba trazas internas del servidor.
+ *
+ * @param {Function} fn Función a ejecutar.
+ */
+function ejecutarSeguro_(fn) {
+  try {
+    return { ok: true, data: fn() };
+  } catch (e) {
+    var msg = e && e.message ? e.message : String(e);
+    console.error(msg + (e && e.stack ? ' | ' + e.stack : ''));
+    // Mensajes controlados se devuelven tal cual; el resto se generaliza.
+    var controlado = /^(SESION_INVALIDA|PERMISO_DENEGADO|DATO_INVALIDO|REGLA_NEGOCIO)/.test(msg);
+    return { ok: false, error: controlado ? msg : 'Error interno del servidor. Intente de nuevo.' };
+  }
+}
+
+
+/* ===== Auth.gs ===== */
+/**
+ * ============================================================================
+ *  NECHIMOTOS CRM  ·  Auth.gs
+ * ----------------------------------------------------------------------------
+ *  Login, logout, restauración de sesión y gestión de usuarios (solo ADMIN).
+ *  Depende de Security.gs (hash + tokens + RBAC) y Logger.gs (auditoría).
+ * ============================================================================
+ */
+
+/**
+ * Punto de entrada de la Web App.
+ * Sirve una única página (SPA) y evalúa las plantillas HTML incluidas.
+ */
+function doGet() {
+  var t = HtmlService.createTemplateFromFile('Index');
+  return t.evaluate()
+    .setTitle('Nechimotos · CRM de Inventarios y Ventas')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=5')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+/** Permite incluir StyleCss.html / AppJs.html / ReportesJs.html dentro de Index. */
+function include(nombreArchivo) {
+  return HtmlService.createHtmlOutputFromFile(nombreArchivo).getContent();
+}
+
+/* ===========================================================================
+ *  LOGIN / LOGOUT
+ * =========================================================================== */
+
+/**
+ * Verifica credenciales y abre sesión.
+ *
+ * @param {string} usuario  Nombre de usuario.
+ * @param {string} password Contraseña en texto plano (viaja por HTTPS de Google).
+ * @return {Object} { ok, data: { token, perfil } } | { ok:false, error }
+ */
+function login(usuario, password) {
+  return ejecutarSeguro_(function () {
+    var user = limpiarTexto_(usuario, 60);
+    var pass = String(password || '');
+    if (!user || !pass) throw new Error('DATO_INVALIDO: usuario y contraseña son obligatorios.');
+
+    // Protección contra fuerza bruta.
+    if (intentosFallidos_(user) >= LOGIN_MAX_INTENTOS) {
+      registrarAuditoriaAnonima_(user, 'LOGIN_BLOQUEADO',
+        'Cuenta bloqueada temporalmente por exceso de intentos fallidos.');
+      throw new Error('REGLA_NEGOCIO: cuenta bloqueada temporalmente. Intente en 10 minutos.');
+    }
+
+    var registro = buscarUsuario_(user);
+    if (!registro) {
+      sumarIntentoFallido_(user);
+      registrarAuditoriaAnonima_(user, 'LOGIN_FALLIDO', 'Usuario inexistente.');
+      throw new Error('REGLA_NEGOCIO: usuario o contraseña incorrectos.');
+    }
+
+    var d = registro.datos;
+    if (norm_(d.Estado_Cuenta) !== 'ACTIVO') {
+      registrarAuditoriaAnonima_(user, 'LOGIN_FALLIDO', 'Cuenta inactiva.');
+      throw new Error('REGLA_NEGOCIO: la cuenta se encuentra inactiva. Contacte a la jefatura.');
+    }
+
+    var hash = hashPassword(user, pass);
+    if (!compararHash_(hash, String(d.Password_Hash || '').trim().toLowerCase())) {
+      var n = sumarIntentoFallido_(user);
+      registrarAuditoriaAnonima_(user, 'LOGIN_FALLIDO', 'Contraseña incorrecta. Intento ' + n + '.');
+      throw new Error('REGLA_NEGOCIO: usuario o contraseña incorrectos.');
+    }
+
+    limpiarIntentos_(user);
+    var token = crearSesion_(d);
+    var ses = validarSesion_(token);
+    registrarAuditoria_(ses, 'LOGIN_EXITOSO', '', 'Inicio de sesión correcto.');
+
+    return { token: token, perfil: perfilPublico_(ses) };
+  });
+}
+
+/** Cierra la sesión activa. */
+function logout(token) {
+  return ejecutarSeguro_(function () {
+    try {
+      var ses = validarSesion_(token);
+      registrarAuditoria_(ses, 'LOGOUT', '', 'Cierre de sesión.');
+    } catch (e) { /* token ya expirado: nada que registrar */ }
+    destruirSesion_(token);
+    return true;
+  });
+}
+
+/**
+ * Restaura la sesión al recargar la página (el token se guarda en
+ * sessionStorage del navegador; el servidor sigue siendo la única autoridad).
+ */
+function restaurarSesion(token) {
+  return ejecutarSeguro_(function () {
+    var ses = validarSesion_(token);
+    return { token: token, perfil: perfilPublico_(ses) };
+  });
+}
+
+/**
+ * Datos de contexto que el frontend necesita para pintar la UI.
+ * Nunca incluye hashes ni información de otros usuarios.
+ */
+function perfilPublico_(ses) {
+  var global = esGlobal_(ses);
+  return {
+    usuario: ses.usuario,
+    rol: ses.rol,
+    pdv: global ? 'RED NACIONAL' : ses.pdv,
+    pdvAsignado: ses.pdv,
+    marca: global ? MARCAS.TODAS : ses.marca,
+    esGlobal: global,
+    pdvs: global ? CATALOGO_PDV.map(function (p) { return p.nombre; }) : [ses.pdv],
+    catalogoPdv: CATALOGO_PDV,
+    catalogoLineas: CATALOGO_LINEAS,
+    marcas: [MARCAS.TVS, MARCAS.MOBILITY],
+    estadosInventario: ESTADOS_INVENTARIO,
+    tiposVenta: TIPOS_VENTA
+  };
+}
+
+/** Busca un usuario por nombre de login (case-insensitive). */
+function buscarUsuario_(usuario) {
+  var tabla = leerTabla_(SHEETS.USUARIOS);
+  var objetivo = norm_(usuario);
+  for (var i = 0; i < tabla.filas.length; i++) {
+    if (norm_(tabla.filas[i].datos.Usuario) === objetivo) return tabla.filas[i];
+  }
+  return null;
+}
+
+/* ===========================================================================
+ *  GESTIÓN DE USUARIOS (ADMIN)
+ * =========================================================================== */
+
+/** Lista los usuarios sin exponer los hashes de contraseña. */
+function listarUsuarios(token) {
+  return ejecutarSeguro_(function () {
+    var ses = validarSesion_(token);
+    exigirRol_(ses, [ROLES.ADMIN]);
+    return leerTabla_(SHEETS.USUARIOS).filas.map(function (f) {
+      var d = f.datos;
+      return {
+        ID_Usuario: d.ID_Usuario,
+        Usuario: d.Usuario,
+        Rol: d.Rol,
+        PDV_Asignado: d.PDV_Asignado,
+        Marca_Permitida: d.Marca_Permitida,
+        Estado_Cuenta: d.Estado_Cuenta
+      };
+    });
+  });
+}
+
+/**
+ * Crea un usuario nuevo. Solo ADMIN.
+ * @param {Object} datos { usuario, password, rol, pdv, marca }
+ */
+function crearUsuario(token, datos) {
+  return ejecutarSeguro_(function () {
+    var ses = validarSesion_(token);
+    exigirRol_(ses, [ROLES.ADMIN]);
+    datos = datos || {};
+
+    var usuario = limpiarTexto_(datos.usuario, 60);
+    var password = String(datos.password || '');
+    if (usuario.length < 3) throw new Error('DATO_INVALIDO: el usuario debe tener al menos 3 caracteres.');
+    if (password.length < 8) throw new Error('DATO_INVALIDO: la contraseña debe tener al menos 8 caracteres.');
+    if (buscarUsuario_(usuario)) throw new Error('REGLA_NEGOCIO: el usuario ya existe.');
+
+    var rol = exigirEnLista_(datos.rol, [ROLES.ADMIN, ROLES.AUXILIAR, ROLES.ASESOR_PDV], 'Rol');
+    var marca = exigirEnLista_(datos.marca, ['TVS', 'MOBILITY', 'TODAS'], 'Marca_Permitida');
+    var pdv = limpiarTexto_(datos.pdv, 80);
+
+    if (rol === ROLES.ASESOR_PDV) {
+      pdv = exigirEnLista_(pdv, pdvsPorMarca_(null), 'PDV_Asignado');
+    } else {
+      pdv = pdv || 'RED NACIONAL';
+      marca = 'TODAS';
+    }
+
+    var id = 'U-' + Utilities.formatDate(new Date(), TZ, 'yyMMddHHmmss');
+    anexarFila_(SHEETS.USUARIOS, {
+      ID_Usuario: id,
+      Usuario: usuario,
+      Password_Hash: hashPassword(usuario, password),
+      Rol: rol,
+      PDV_Asignado: pdv,
+      Marca_Permitida: marca,
+      Estado_Cuenta: 'Activo'
+    });
+
+    registrarAuditoria_(ses, 'USUARIO_CREADO', '',
+      'Usuario=' + usuario + ' Rol=' + rol + ' PDV=' + pdv + ' Marca=' + marca);
+    return { ID_Usuario: id, Usuario: usuario };
+  });
+}
+
+/**
+ * Cambia el estado de una cuenta (Activo / Inactivo). Solo ADMIN.
+ */
+function cambiarEstadoUsuario(token, usuario, nuevoEstado) {
+  return ejecutarSeguro_(function () {
+    var ses = validarSesion_(token);
+    exigirRol_(ses, [ROLES.ADMIN]);
+    var estado = exigirEnLista_(nuevoEstado, ESTADOS_CUENTA, 'Estado_Cuenta');
+    var reg = buscarUsuario_(usuario);
+    if (!reg) throw new Error('REGLA_NEGOCIO: usuario no encontrado.');
+    if (norm_(reg.datos.Usuario) === norm_(ses.usuario) && estado === 'Inactivo') {
+      throw new Error('REGLA_NEGOCIO: no puede desactivar su propia cuenta.');
+    }
+    var col = COLUMNS.Usuarios.indexOf('Estado_Cuenta') + 1;
+    getSheet_(SHEETS.USUARIOS).getRange(reg.fila, col).setValue(estado);
+    registrarAuditoria_(ses, 'USUARIO_ESTADO', '', 'Usuario=' + reg.datos.Usuario + ' -> ' + estado);
+    return true;
+  });
+}
+
+/**
+ * Restablece la contraseña de un usuario. Solo ADMIN.
+ */
+function restablecerPassword(token, usuario, nuevaPassword) {
+  return ejecutarSeguro_(function () {
+    var ses = validarSesion_(token);
+    exigirRol_(ses, [ROLES.ADMIN]);
+    var pass = String(nuevaPassword || '');
+    if (pass.length < 8) throw new Error('DATO_INVALIDO: la contraseña debe tener al menos 8 caracteres.');
+    var reg = buscarUsuario_(usuario);
+    if (!reg) throw new Error('REGLA_NEGOCIO: usuario no encontrado.');
+    var col = COLUMNS.Usuarios.indexOf('Password_Hash') + 1;
+    getSheet_(SHEETS.USUARIOS).getRange(reg.fila, col)
+      .setValue(hashPassword(reg.datos.Usuario, pass));
+    limpiarIntentos_(reg.datos.Usuario);
+    registrarAuditoria_(ses, 'PASSWORD_RESET', '', 'Usuario=' + reg.datos.Usuario);
+    return true;
+  });
+}
+
+/**
+ * Cambio de contraseña por el propio usuario (requiere la contraseña actual).
+ */
+function cambiarMiPassword(token, actual, nueva) {
+  return ejecutarSeguro_(function () {
+    var ses = validarSesion_(token);
+    var pass = String(nueva || '');
+    if (pass.length < 8) throw new Error('DATO_INVALIDO: la nueva contraseña debe tener al menos 8 caracteres.');
+    var reg = buscarUsuario_(ses.usuario);
+    if (!reg) throw new Error('REGLA_NEGOCIO: usuario no encontrado.');
+    if (!compararHash_(hashPassword(ses.usuario, String(actual || '')),
+                       String(reg.datos.Password_Hash || '').trim().toLowerCase())) {
+      registrarAuditoria_(ses, 'PASSWORD_CAMBIO_FALLIDO', '', 'Contraseña actual incorrecta.');
+      throw new Error('REGLA_NEGOCIO: la contraseña actual no es correcta.');
+    }
+    var col = COLUMNS.Usuarios.indexOf('Password_Hash') + 1;
+    getSheet_(SHEETS.USUARIOS).getRange(reg.fila, col).setValue(hashPassword(ses.usuario, pass));
+    registrarAuditoria_(ses, 'PASSWORD_CAMBIO', '', 'Cambio de contraseña por el propio usuario.');
+    return true;
+  });
+}
+
+
+/* ===== InventarioService.gs ===== */
+/**
+ * ============================================================================
+ *  NECHIMOTOS CRM  ·  InventarioService.gs
+ * ----------------------------------------------------------------------------
+ *  Lectura y gestión del stock activo:
+ *   - Filtrado server-side por PDV y marca según el rol de la sesión.
+ *   - Alta de unidades (ingreso de mercancía).
+ *   - Cambios de estado operativos (Test Drive / Consignación / Disponible).
+ *   - Cálculo de `Dias_en_Sala` (HOY - Fecha_Ingreso).
+ *
+ *  IMPORTANTE: el filtrado NO se hace en el navegador. Un ASESOR_PDV nunca
+ *  recibe filas de otros puntos de venta ni de marcas ajenas.
+ * ============================================================================
+ */
+
+/**
+ * Devuelve el inventario visible para la sesión, con filtros opcionales.
+ *
+ * @param {string} token  Token de sesión.
+ * @param {Object} filtro { pdv, marca, estado, linea, texto }
+ * @return {Object} { ok, data: { filas:[], resumen:{} } }
+ */
+function obtenerInventario(token, filtro) {
+  return ejecutarSeguro_(function () {
+    var ses = validarSesion_(token);
+    filtro = filtro || {};
+    var hoy = new Date();
+
+    var fPdv    = norm_(filtro.pdv || '');
+    var fMarca  = norm_(filtro.marca || '');
+    var fEstado = norm_(filtro.estado || '');
+    var fLinea  = norm_(filtro.linea || '');
+    var fTexto  = norm_(filtro.texto || '');
+
+    var filas = [];
+    var resumen = { total: 0, disponible: 0, enTraslado: 0, consignacion: 0, testDrive: 0, mas60: 0 };
+
+    leerTabla_(SHEETS.INVENTARIO).filas.forEach(function (f) {
+      var d = f.datos;
+      // 1) Control de acceso obligatorio (PDV + marca).
+      if (!puedeVer_(ses, d.PDV_Actual, d.Marca)) return;
+      // 2) Filtros de interfaz (solo restringen más, nunca amplían).
+      if (fPdv && norm_(d.PDV_Actual) !== fPdv) return;
+      if (fMarca && norm_(d.Marca) !== fMarca) return;
+      if (fEstado && norm_(d.Estado) !== fEstado) return;
+      if (fLinea && norm_(d.Linea_Modelo) !== fLinea) return;
+      if (fTexto) {
+        var blob = norm_([d.Chasis_VIN, d.Motor, d.Linea_Modelo, d.Color, d.Asesor_Asignado].join(' '));
+        if (blob.indexOf(fTexto) === -1) return;
+      }
+
+      var dias = diasEntre_(d.Fecha_Ingreso, hoy);
+      filas.push({
+        Chasis_VIN: d.Chasis_VIN,
+        Motor: d.Motor,
+        Marca: d.Marca,
+        Linea_Modelo: d.Linea_Modelo,
+        Modelo_Ano: d.Modelo_Ano,
+        Color: d.Color,
+        Fecha_Ingreso: formatearFecha_(d.Fecha_Ingreso),
+        Dias_en_Sala: dias,
+        PDV_Actual: d.PDV_Actual,
+        Estado: d.Estado,
+        Asesor_Asignado: d.Asesor_Asignado,
+        Observacion: d.Observacion
+      });
+
+      resumen.total++;
+      switch (norm_(d.Estado)) {
+        case 'DISPONIBLE':   resumen.disponible++; break;
+        case 'EN TRASLADO':  resumen.enTraslado++; break;
+        case 'CONSIGNACION': resumen.consignacion++; break;
+        case 'TEST DRIVE':   resumen.testDrive++; break;
+      }
+      if (typeof dias === 'number' && dias > 60) resumen.mas60++;
+    });
+
+    // Orden: más antiguo en sala primero (prioridad comercial de rotación).
+    filas.sort(function (a, b) { return (b.Dias_en_Sala || 0) - (a.Dias_en_Sala || 0); });
+    return { filas: filas, resumen: resumen };
+  });
+}
+
+/**
+ * Busca una unidad concreta por VIN validando permisos.
+ * Uso interno de VentasService y TrasladosService.
+ *
+ * @return {{fila:number, datos:Object}}
+ */
+function buscarUnidadPorVin_(vin) {
+  var objetivo = norm_(vin);
+  var tabla = leerTabla_(SHEETS.INVENTARIO);
+  for (var i = 0; i < tabla.filas.length; i++) {
+    if (norm_(tabla.filas[i].datos.Chasis_VIN) === objetivo) return tabla.filas[i];
+  }
+  return null;
+}
+
+/** Versión pública: ficha de una unidad (respetando RBAC). */
+function obtenerUnidad(token, vin) {
+  return ejecutarSeguro_(function () {
+    var ses = validarSesion_(token);
+    var v = limpiarVin_(vin);
+    var reg = buscarUnidadPorVin_(v);
+    if (!reg) throw new Error('REGLA_NEGOCIO: el chasis no existe en el inventario activo.');
+    exigirAcceso_(ses, reg.datos.PDV_Actual, reg.datos.Marca, 'CONSULTA_UNIDAD', v);
+    var d = reg.datos;
+    return {
+      Chasis_VIN: d.Chasis_VIN, Motor: d.Motor, Marca: d.Marca,
+      Linea_Modelo: d.Linea_Modelo, Modelo_Ano: d.Modelo_Ano, Color: d.Color,
+      Fecha_Ingreso: formatearFecha_(d.Fecha_Ingreso),
+      Dias_en_Sala: diasEntre_(d.Fecha_Ingreso, new Date()),
+      PDV_Actual: d.PDV_Actual, Estado: d.Estado,
+      Asesor_Asignado: d.Asesor_Asignado, Observacion: d.Observacion
+    };
+  });
+}
+
+/**
+ * Ingresa una unidad nueva al inventario.
+ * ADMIN/AUXILIAR pueden ingresar en cualquier PDV; el ASESOR_PDV solo en el suyo.
+ *
+ * @param {Object} datos { vin, motor, marca, linea, modeloAno, color, pdv,
+ *                         fechaIngreso, asesor, observacion }
+ */
+function ingresarUnidad(token, datos) {
+  return ejecutarSeguro_(function () {
+    var ses = validarSesion_(token);
+    datos = datos || {};
+
+    var vin   = limpiarVin_(datos.vin);
+    var marca = exigirEnLista_(datos.marca, [MARCAS.TVS, MARCAS.MOBILITY], 'Marca');
+    var linea = exigirEnLista_(datos.linea, CATALOGO_LINEAS[marca], 'Linea_Modelo');
+    var pdv   = esGlobal_(ses)
+      ? exigirEnLista_(datos.pdv, pdvsPorMarca_(marca), 'PDV_Actual')
+      : ses.pdv;
+
+    // Un asesor solo puede ingresar unidades de su marca y en su punto.
+    exigirAcceso_(ses, pdv, marca, 'INGRESO_UNIDAD', vin);
+
+    // El PDV debe estar homologado para la marca.
+    if (pdvsPorMarca_(marca).indexOf(pdv) === -1) {
+      throw new Error('REGLA_NEGOCIO: el punto ' + pdv + ' no está autorizado para la marca ' + marca + '.');
+    }
+
+    var lock = LockService.getScriptLock();
+    lock.waitLock(LOCK_TIMEOUT_MS);
+    try {
+      if (buscarUnidadPorVin_(vin)) {
+        throw new Error('REGLA_NEGOCIO: el chasis ' + vin + ' ya existe en el inventario.');
+      }
+      var anio = parseInt(datos.modeloAno, 10);
+      if (!anio || anio < 2000 || anio > new Date().getFullYear() + 2) {
+        throw new Error('DATO_INVALIDO: modelo/año fuera de rango.');
+      }
+      var fechaIngreso = datos.fechaIngreso ? new Date(datos.fechaIngreso) : new Date();
+      if (isNaN(fechaIngreso.getTime())) fechaIngreso = new Date();
+
+      anexarFila_(SHEETS.INVENTARIO, {
+        Chasis_VIN: vin,
+        Motor: limpiarTexto_(datos.motor, 40).toUpperCase(),
+        Marca: marca,
+        Linea_Modelo: linea,
+        Modelo_Ano: anio,
+        Color: limpiarTexto_(datos.color, 40),
+        Fecha_Ingreso: fechaIngreso,
+        PDV_Actual: pdv,
+        Estado: 'Disponible',
+        Asesor_Asignado: limpiarTexto_(datos.asesor, 60) || ses.usuario,
+        Observacion: limpiarTexto_(datos.observacion, 300)
+      });
+    } finally {
+      lock.releaseLock();
+    }
+
+    registrarAuditoria_(ses, 'INGRESO_UNIDAD', vin,
+      'Marca=' + marca + ' Linea=' + linea + ' PDV=' + pdv);
+    return { Chasis_VIN: vin };
+  });
+}
+
+/**
+ * Cambia el estado operativo de una unidad.
+ * No permite fijar 'En Traslado' manualmente: ese estado solo lo produce el
+ * protocolo de traslados en 2 pasos (TrasladosService.gs).
+ */
+function cambiarEstadoUnidad(token, vin, nuevoEstado, observacion) {
+  return ejecutarSeguro_(function () {
+    var ses = validarSesion_(token);
+    var v = limpiarVin_(vin);
+    var estado = exigirEnLista_(nuevoEstado, ['Disponible', 'Consignacion', 'Test Drive'], 'Estado');
+
+    var lock = LockService.getScriptLock();
+    lock.waitLock(LOCK_TIMEOUT_MS);
+    try {
+      var reg = buscarUnidadPorVin_(v);
+      if (!reg) throw new Error('REGLA_NEGOCIO: el chasis no existe en el inventario activo.');
+      exigirAcceso_(ses, reg.datos.PDV_Actual, reg.datos.Marca, 'CAMBIO_ESTADO', v);
+      if (norm_(reg.datos.Estado) === 'EN TRASLADO') {
+        throw new Error('REGLA_NEGOCIO: la unidad está en tránsito; confirme la recepción primero.');
+      }
+      var sh = getSheet_(SHEETS.INVENTARIO);
+      sh.getRange(reg.fila, COLUMNS.Inventario.indexOf('Estado') + 1).setValue(estado);
+      var obs = limpiarTexto_(observacion, 300);
+      if (obs) {
+        sh.getRange(reg.fila, COLUMNS.Inventario.indexOf('Observacion') + 1).setValue(obs);
+      }
+      registrarAuditoria_(ses, 'CAMBIO_ESTADO', v,
+        'Estado ' + reg.datos.Estado + ' -> ' + estado + (obs ? ' | ' + obs : ''));
+    } finally {
+      lock.releaseLock();
+    }
+    return true;
+  });
+}
+
+/**
+ * Reasigna el asesor responsable de una unidad dentro del mismo PDV.
+ */
+function asignarAsesor(token, vin, asesor) {
+  return ejecutarSeguro_(function () {
+    var ses = validarSesion_(token);
+    var v = limpiarVin_(vin);
+    var nombre = limpiarTexto_(asesor, 60);
+    if (!nombre) throw new Error('DATO_INVALIDO: indique el nombre del asesor.');
+    var reg = buscarUnidadPorVin_(v);
+    if (!reg) throw new Error('REGLA_NEGOCIO: el chasis no existe en el inventario activo.');
+    exigirAcceso_(ses, reg.datos.PDV_Actual, reg.datos.Marca, 'ASIGNAR_ASESOR', v);
+    getSheet_(SHEETS.INVENTARIO)
+      .getRange(reg.fila, COLUMNS.Inventario.indexOf('Asesor_Asignado') + 1)
+      .setValue(nombre);
+    registrarAuditoria_(ses, 'ASIGNAR_ASESOR', v, 'Asesor=' + nombre);
+    return true;
+  });
+}
+
+/**
+ * Catálogo de líneas para los formularios (depende de la marca permitida).
+ */
+function obtenerCatalogos(token) {
+  return ejecutarSeguro_(function () {
+    var ses = validarSesion_(token);
+    var marcas = esGlobal_(ses)
+      ? [MARCAS.TVS, MARCAS.MOBILITY]
+      : [MARCAS.TVS, MARCAS.MOBILITY].filter(function (m) { return marcaPermitida_(ses, m); });
+    var lineas = {};
+    marcas.forEach(function (m) { lineas[m] = CATALOGO_LINEAS[m]; });
+    return {
+      marcas: marcas,
+      lineas: lineas,
+      pdvs: esGlobal_(ses) ? CATALOGO_PDV : CATALOGO_PDV.filter(function (p) {
+        return norm_(p.nombre) === norm_(ses.pdv);
+      }),
+      estados: ESTADOS_INVENTARIO,
+      tiposVenta: TIPOS_VENTA
+    };
+  });
+}
+
+
+/* ===== VentasService.gs ===== */
+/**
+ * ============================================================================
+ *  NECHIMOTOS CRM  ·  VentasService.gs
+ * ----------------------------------------------------------------------------
+ *  Registro de ventas con cálculo automático de periodos comerciales.
+ *
+ *  Regla de negocio (sección 6.A del alcance):
+ *   1. La unidad debe estar `Disponible` y en el PDV del usuario.
+ *   2. El servidor toma la fecha/hora real (new Date()) — nunca la del cliente.
+ *   3. Calcula Ano, Mes_Venta (YYYY-MM), Semana_Mes (1..5) y Dias_Totales_Sala.
+ *   4. La fila se ELIMINA de `Inventario` y se INSERTA en `Ventas`.
+ *
+ *  Toda la operación se ejecuta bajo LockService para que dos asesores no
+ *  puedan vender el mismo chasis simultáneamente.
+ * ============================================================================
+ */
+
+/**
+ * Calcula la semana comercial del mes a partir del día calendario.
+ *  1-7 => Semana 1 | 8-14 => Semana 2 | 15-21 => Semana 3
+ *  22-28 => Semana 4 | 29+ => Semana 5
+ *
+ * @param {Date} fecha
+ * @return {string} 'Semana N'
+ */
+function calcularSemanaMes_(fecha) {
+  var dia = fecha.getDate();
+  if (dia <= 7) return 'Semana 1';
+  if (dia <= 14) return 'Semana 2';
+  if (dia <= 21) return 'Semana 3';
+  if (dia <= 28) return 'Semana 4';
+  return 'Semana 5';
+}
+
+/** Cadena YYYY-MM del periodo de venta. */
+function calcularMesVenta_(fecha) {
+  return Utilities.formatDate(fecha, TZ, 'yyyy-MM');
+}
+
+/** Genera un consecutivo único de venta: V-AAAAMMDD-HHMMSS-XXX. */
+function generarIdVenta_() {
+  var ahora = new Date();
+  var sufijo = ('000' + Math.floor(Math.random() * 1000)).slice(-3);
+  return 'V-' + Utilities.formatDate(ahora, TZ, 'yyyyMMdd-HHmmss') + '-' + sufijo;
+}
+
+/**
+ * Registra la venta de una unidad del inventario activo.
+ *
+ * @param {string} token Token de sesión.
+ * @param {Object} datos { vin, tipoVenta, asesor, observacion }
+ * @return {Object} { ok, data: { ID_Venta, ... } }
+ */
+function registrarVenta(token, datos) {
+  return ejecutarSeguro_(function () {
+    var ses = validarSesion_(token);
+    datos = datos || {};
+
+    var vin = limpiarVin_(datos.vin);
+    var tipoVenta = exigirEnLista_(datos.tipoVenta, TIPOS_VENTA, 'Tipo_Venta');
+    var observacion = limpiarTexto_(datos.observacion, 300);
+
+    var resultado;
+    var lock = LockService.getScriptLock();
+    lock.waitLock(LOCK_TIMEOUT_MS);
+    try {
+      var reg = buscarUnidadPorVin_(vin);
+      if (!reg) throw new Error('REGLA_NEGOCIO: el chasis no existe en el inventario activo.');
+      var u = reg.datos;
+
+      // --- Validaciones de seguridad y de negocio -------------------------
+      exigirAcceso_(ses, u.PDV_Actual, u.Marca, 'REGISTRAR_VENTA', vin);
+      if (norm_(u.Estado) === 'EN TRASLADO') {
+        throw new Error('REGLA_NEGOCIO: la unidad está en tránsito y no puede venderse.');
+      }
+      if (['DISPONIBLE', 'CONSIGNACION', 'TEST DRIVE'].indexOf(norm_(u.Estado)) === -1) {
+        throw new Error('REGLA_NEGOCIO: estado no vendible (' + u.Estado + ').');
+      }
+
+      // --- Cálculos automáticos del servidor ------------------------------
+      var ahora = new Date();
+      var idVenta = generarIdVenta_();
+      var dias = diasEntre_(u.Fecha_Ingreso, ahora);
+      var asesor = limpiarTexto_(datos.asesor, 60) ||
+                   limpiarTexto_(u.Asesor_Asignado, 60) || ses.usuario;
+
+      var venta = {
+        ID_Venta: idVenta,
+        Fecha_Venta: ahora,
+        Mes_Venta: calcularMesVenta_(ahora),
+        Semana_Mes: calcularSemanaMes_(ahora),
+        Ano: ahora.getFullYear(),
+        Chasis_VIN: u.Chasis_VIN,
+        Motor: u.Motor,
+        Marca: u.Marca,
+        Linea_Modelo: u.Linea_Modelo,
+        Modelo_Ano: u.Modelo_Ano,
+        Color: u.Color,
+        Fecha_Ingreso: u.Fecha_Ingreso,
+        Dias_Totales_Sala: dias,
+        PDV_Venta: u.PDV_Actual,
+        Asesor_Vendedor: asesor,
+        Tipo_Venta: tipoVenta,
+        Observacion: observacion
+      };
+
+      // --- Escritura atómica: primero histórico, luego baja de inventario --
+      anexarFila_(SHEETS.VENTAS, venta);
+      getSheet_(SHEETS.INVENTARIO).deleteRow(reg.fila);
+      SpreadsheetApp.flush();
+
+      resultado = {
+        ID_Venta: idVenta,
+        Chasis_VIN: u.Chasis_VIN,
+        Marca: u.Marca,
+        Linea_Modelo: u.Linea_Modelo,
+        PDV_Venta: u.PDV_Actual,
+        Fecha_Venta: formatearFechaHora_(ahora),
+        Mes_Venta: venta.Mes_Venta,
+        Semana_Mes: venta.Semana_Mes,
+        Dias_Totales_Sala: dias,
+        Asesor_Vendedor: asesor,
+        Tipo_Venta: tipoVenta
+      };
+    } finally {
+      lock.releaseLock();
+    }
+
+    registrarAuditoria_(ses, 'VENTA_REGISTRADA', vin,
+      'ID=' + resultado.ID_Venta + ' PDV=' + resultado.PDV_Venta +
+      ' Tipo=' + tipoVenta + ' DiasSala=' + resultado.Dias_Totales_Sala);
+
+    return resultado;
+  });
+}
+
+/**
+ * Histórico de ventas visible para la sesión.
+ * El ASESOR_PDV solo ve las ventas de su punto y su marca.
+ *
+ * @param {Object} filtro { mes, semana, ano, pdv, marca, texto, limite }
+ */
+function obtenerVentas(token, filtro) {
+  return ejecutarSeguro_(function () {
+    var ses = validarSesion_(token);
+    filtro = filtro || {};
+    var limite = Math.min(parseInt(filtro.limite, 10) || 500, 3000);
+
+    var fMes    = limpiarTexto_(filtro.mes, 7);
+    var fSemana = limpiarTexto_(filtro.semana, 20);
+    var fAno    = filtro.ano ? String(parseInt(filtro.ano, 10)) : '';
+    var fPdv    = norm_(filtro.pdv || '');
+    var fMarca  = norm_(filtro.marca || '');
+    var fTexto  = norm_(filtro.texto || '');
+
+    var tabla = leerTabla_(SHEETS.VENTAS);
+    var out = [];
+    for (var i = tabla.filas.length - 1; i >= 0 && out.length < limite; i--) {
+      var d = tabla.filas[i].datos;
+      if (!puedeVer_(ses, d.PDV_Venta, d.Marca)) continue;
+      if (fMes && String(d.Mes_Venta).trim() !== fMes) continue;
+      if (fSemana && norm_(d.Semana_Mes) !== norm_(fSemana)) continue;
+      if (fAno && String(d.Ano).trim() !== fAno) continue;
+      if (fPdv && norm_(d.PDV_Venta) !== fPdv) continue;
+      if (fMarca && norm_(d.Marca) !== fMarca) continue;
+      if (fTexto) {
+        var blob = norm_([d.Chasis_VIN, d.Motor, d.Linea_Modelo, d.Asesor_Vendedor, d.ID_Venta].join(' '));
+        if (blob.indexOf(fTexto) === -1) continue;
+      }
+      out.push({
+        ID_Venta: d.ID_Venta,
+        Fecha_Venta: formatearFechaHora_(d.Fecha_Venta),
+        Mes_Venta: d.Mes_Venta,
+        Semana_Mes: d.Semana_Mes,
+        Ano: d.Ano,
+        Chasis_VIN: d.Chasis_VIN,
+        Motor: d.Motor,
+        Marca: d.Marca,
+        Linea_Modelo: d.Linea_Modelo,
+        Modelo_Ano: d.Modelo_Ano,
+        Color: d.Color,
+        Fecha_Ingreso: formatearFecha_(d.Fecha_Ingreso),
+        Dias_Totales_Sala: d.Dias_Totales_Sala,
+        PDV_Venta: d.PDV_Venta,
+        Asesor_Vendedor: d.Asesor_Vendedor,
+        Tipo_Venta: d.Tipo_Venta,
+        Observacion: d.Observacion
+      });
+    }
+    return out;
+  });
+}
+
+/**
+ * Indicadores rápidos de venta para la tarjeta superior del dashboard
+ * (mes en curso, dentro del alcance visible de la sesión).
+ */
+function resumenVentasMesActual(token) {
+  return ejecutarSeguro_(function () {
+    var ses = validarSesion_(token);
+    var mesActual = calcularMesVenta_(new Date());
+    var total = 0, tvs = 0, mobility = 0, diasAcum = 0;
+
+    leerTabla_(SHEETS.VENTAS).filas.forEach(function (f) {
+      var d = f.datos;
+      if (String(d.Mes_Venta).trim() !== mesActual) return;
+      if (!puedeVer_(ses, d.PDV_Venta, d.Marca)) return;
+      total++;
+      if (norm_(d.Marca) === 'TVS') tvs++; else mobility++;
+      var dd = parseInt(d.Dias_Totales_Sala, 10);
+      if (!isNaN(dd)) diasAcum += dd;
+    });
+
+    return {
+      mes: mesActual,
+      total: total,
+      tvs: tvs,
+      mobility: mobility,
+      promedioDiasSala: total ? Math.round(diasAcum / total) : 0
+    };
+  });
+}
+
+
+/* ===== TrasladosService.gs ===== */
+/**
+ * ============================================================================
+ *  NECHIMOTOS CRM  ·  TrasladosService.gs
+ * ----------------------------------------------------------------------------
+ *  Protocolo de traslados en 2 pasos (cero desfases de inventario):
+ *
+ *   PASO 1 — DESPACHO (PDV Origen)
+ *     · La unidad pasa a estado `En Traslado` (sigue contabilizada en origen).
+ *     · Se crea una fila en `Traslados` con Estado_Traslado = 'En Transito'.
+ *
+ *   PASO 2 — RECEPCIÓN (PDV Destino)
+ *     · El destino ve la unidad en su bandeja de entrantes.
+ *     · Al confirmar: PDV_Actual = destino, Estado = 'Disponible' y la
+ *       bitácora se cierra con Fecha_Recepcion y Estado = 'Confirmado'.
+ *
+ *  Restricción de marca: PDV_Destino solo puede ser un punto homologado para
+ *  la marca de la motocicleta (CATALOGO_PDV en Config.gs).
+ * ============================================================================
+ */
+
+/** Genera el consecutivo de traslado. */
+function generarIdTraslado_() {
+  var sufijo = ('000' + Math.floor(Math.random() * 1000)).slice(-3);
+  return 'T-' + Utilities.formatDate(new Date(), TZ, 'yyyyMMdd-HHmmss') + '-' + sufijo;
+}
+
+/**
+ * Devuelve los PDV de destino válidos para un chasis concreto.
+ * Filtra por marca y excluye el punto de origen.
+ */
+function obtenerDestinosValidos(token, vin) {
+  return ejecutarSeguro_(function () {
+    var ses = validarSesion_(token);
+    var v = limpiarVin_(vin);
+    var reg = buscarUnidadPorVin_(v);
+    if (!reg) throw new Error('REGLA_NEGOCIO: el chasis no existe en el inventario activo.');
+    exigirAcceso_(ses, reg.datos.PDV_Actual, reg.datos.Marca, 'CONSULTA_DESTINOS', v);
+
+    var origen = norm_(reg.datos.PDV_Actual);
+    return {
+      marca: reg.datos.Marca,
+      origen: reg.datos.PDV_Actual,
+      destinos: pdvsPorMarca_(reg.datos.Marca).filter(function (p) {
+        return norm_(p) !== origen;
+      })
+    };
+  });
+}
+
+/**
+ * PASO 1 · Despacho desde el PDV de origen.
+ *
+ * @param {Object} datos { vin, pdvDestino, observacion }
+ */
+function despacharTraslado(token, datos) {
+  return ejecutarSeguro_(function () {
+    var ses = validarSesion_(token);
+    datos = datos || {};
+    var vin = limpiarVin_(datos.vin);
+    var observacion = limpiarTexto_(datos.observacion, 300);
+    var resultado;
+
+    var lock = LockService.getScriptLock();
+    lock.waitLock(LOCK_TIMEOUT_MS);
+    try {
+      var reg = buscarUnidadPorVin_(vin);
+      if (!reg) throw new Error('REGLA_NEGOCIO: el chasis no existe en el inventario activo.');
+      var u = reg.datos;
+
+      // Seguridad: la unidad debe pertenecer al alcance del usuario.
+      exigirAcceso_(ses, u.PDV_Actual, u.Marca, 'DESPACHAR_TRASLADO', vin);
+
+      if (norm_(u.Estado) === 'EN TRASLADO') {
+        throw new Error('REGLA_NEGOCIO: la unidad ya tiene un traslado en tránsito.');
+      }
+
+      // Validación de destino contra el catálogo homologado por marca.
+      var destinosValidos = pdvsPorMarca_(u.Marca).filter(function (p) {
+        return norm_(p) !== norm_(u.PDV_Actual);
+      });
+      var destino = exigirEnLista_(datos.pdvDestino, destinosValidos, 'PDV_Destino');
+
+      var ahora = new Date();
+      var idTraslado = generarIdTraslado_();
+
+      anexarFila_(SHEETS.TRASLADOS, {
+        ID_Traslado: idTraslado,
+        Fecha_Despacho: ahora,
+        Fecha_Recepcion: '',
+        Chasis_VIN: u.Chasis_VIN,
+        PDV_Origen: u.PDV_Actual,
+        PDV_Destino: destino,
+        Usuario_Despacha: ses.usuario,
+        Usuario_Recibe: '',
+        Estado_Traslado: ESTADOS_TRASLADO.TRANSITO,
+        Observacion: observacion
+      });
+
+      getSheet_(SHEETS.INVENTARIO)
+        .getRange(reg.fila, COLUMNS.Inventario.indexOf('Estado') + 1)
+        .setValue('En Traslado');
+      SpreadsheetApp.flush();
+
+      resultado = {
+        ID_Traslado: idTraslado,
+        Chasis_VIN: u.Chasis_VIN,
+        PDV_Origen: u.PDV_Actual,
+        PDV_Destino: destino,
+        Fecha_Despacho: formatearFechaHora_(ahora),
+        Estado_Traslado: ESTADOS_TRASLADO.TRANSITO
+      };
+    } finally {
+      lock.releaseLock();
+    }
+
+    registrarAuditoria_(ses, 'TRASLADO_DESPACHADO', vin,
+      'ID=' + resultado.ID_Traslado + ' ' + resultado.PDV_Origen + ' -> ' + resultado.PDV_Destino);
+    return resultado;
+  });
+}
+
+/**
+ * PASO 2 · Confirmación de recepción en el PDV destino.
+ * Solo puede confirmar quien pertenece al punto destino (o un rol global).
+ *
+ * @param {string} idTraslado ID generado en el despacho.
+ */
+function confirmarRecepcion(token, idTraslado, observacion) {
+  return ejecutarSeguro_(function () {
+    var ses = validarSesion_(token);
+    var id = limpiarTexto_(idTraslado, 40);
+    if (!id) throw new Error('DATO_INVALIDO: identificador de traslado requerido.');
+    var obs = limpiarTexto_(observacion, 300);
+    var resultado;
+
+    var lock = LockService.getScriptLock();
+    lock.waitLock(LOCK_TIMEOUT_MS);
+    try {
+      var tabla = leerTabla_(SHEETS.TRASLADOS);
+      var reg = null;
+      for (var i = 0; i < tabla.filas.length; i++) {
+        if (norm_(tabla.filas[i].datos.ID_Traslado) === norm_(id)) { reg = tabla.filas[i]; break; }
+      }
+      if (!reg) throw new Error('REGLA_NEGOCIO: traslado no encontrado.');
+      var t = reg.datos;
+
+      if (norm_(t.Estado_Traslado) !== norm_(ESTADOS_TRASLADO.TRANSITO)) {
+        throw new Error('REGLA_NEGOCIO: el traslado ya fue confirmado.');
+      }
+
+      // Seguridad: solo el destino (o jefatura) confirma la recepción.
+      if (!esGlobal_(ses) && norm_(ses.pdv) !== norm_(t.PDV_Destino)) {
+        registrarAuditoria_(ses, 'ACCESO_DENEGADO', t.Chasis_VIN,
+          'Intento de confirmar recepción de un traslado dirigido a ' + t.PDV_Destino);
+        throw new Error('PERMISO_DENEGADO: solo el punto destino puede confirmar la recepción.');
+      }
+
+      var unidad = buscarUnidadPorVin_(t.Chasis_VIN);
+      if (!unidad) throw new Error('REGLA_NEGOCIO: la unidad ya no está en el inventario activo.');
+
+      var ahora = new Date();
+      var shT = getSheet_(SHEETS.TRASLADOS);
+      shT.getRange(reg.fila, COLUMNS.Traslados.indexOf('Fecha_Recepcion') + 1).setValue(ahora);
+      shT.getRange(reg.fila, COLUMNS.Traslados.indexOf('Usuario_Recibe') + 1).setValue(ses.usuario);
+      shT.getRange(reg.fila, COLUMNS.Traslados.indexOf('Estado_Traslado') + 1)
+         .setValue(ESTADOS_TRASLADO.CONFIRMADO);
+      if (obs) {
+        var previa = limpiarTexto_(t.Observacion, 300);
+        shT.getRange(reg.fila, COLUMNS.Traslados.indexOf('Observacion') + 1)
+           .setValue((previa ? previa + ' | ' : '') + 'RECEPCION: ' + obs);
+      }
+
+      var shI = getSheet_(SHEETS.INVENTARIO);
+      shI.getRange(unidad.fila, COLUMNS.Inventario.indexOf('PDV_Actual') + 1).setValue(t.PDV_Destino);
+      shI.getRange(unidad.fila, COLUMNS.Inventario.indexOf('Estado') + 1).setValue('Disponible');
+      SpreadsheetApp.flush();
+
+      resultado = {
+        ID_Traslado: t.ID_Traslado,
+        Chasis_VIN: t.Chasis_VIN,
+        PDV_Origen: t.PDV_Origen,
+        PDV_Destino: t.PDV_Destino,
+        Fecha_Recepcion: formatearFechaHora_(ahora),
+        Estado_Traslado: ESTADOS_TRASLADO.CONFIRMADO
+      };
+    } finally {
+      lock.releaseLock();
+    }
+
+    registrarAuditoria_(ses, 'TRASLADO_CONFIRMADO', resultado.Chasis_VIN,
+      'ID=' + resultado.ID_Traslado + ' recibido en ' + resultado.PDV_Destino);
+    return resultado;
+  });
+}
+
+/**
+ * Anula un traslado en tránsito (solo ADMIN / AUXILIAR o el punto de origen).
+ * Devuelve la unidad a estado `Disponible` en su PDV de origen.
+ */
+function anularTraslado(token, idTraslado, motivo) {
+  return ejecutarSeguro_(function () {
+    var ses = validarSesion_(token);
+    var id = limpiarTexto_(idTraslado, 40);
+    var razon = limpiarTexto_(motivo, 300);
+    if (!razon) throw new Error('DATO_INVALIDO: indique el motivo de la anulación.');
+
+    var lock = LockService.getScriptLock();
+    lock.waitLock(LOCK_TIMEOUT_MS);
+    try {
+      var tabla = leerTabla_(SHEETS.TRASLADOS);
+      var reg = null;
+      for (var i = 0; i < tabla.filas.length; i++) {
+        if (norm_(tabla.filas[i].datos.ID_Traslado) === norm_(id)) { reg = tabla.filas[i]; break; }
+      }
+      if (!reg) throw new Error('REGLA_NEGOCIO: traslado no encontrado.');
+      var t = reg.datos;
+      if (norm_(t.Estado_Traslado) !== norm_(ESTADOS_TRASLADO.TRANSITO)) {
+        throw new Error('REGLA_NEGOCIO: solo se pueden anular traslados en tránsito.');
+      }
+      if (!esGlobal_(ses) && norm_(ses.pdv) !== norm_(t.PDV_Origen)) {
+        throw new Error('PERMISO_DENEGADO: solo el punto de origen o la jefatura pueden anular.');
+      }
+
+      var shT = getSheet_(SHEETS.TRASLADOS);
+      shT.getRange(reg.fila, COLUMNS.Traslados.indexOf('Estado_Traslado') + 1).setValue('Anulado');
+      shT.getRange(reg.fila, COLUMNS.Traslados.indexOf('Observacion') + 1)
+         .setValue(limpiarTexto_(t.Observacion, 300) + ' | ANULADO: ' + razon);
+
+      var unidad = buscarUnidadPorVin_(t.Chasis_VIN);
+      if (unidad) {
+        getSheet_(SHEETS.INVENTARIO)
+          .getRange(unidad.fila, COLUMNS.Inventario.indexOf('Estado') + 1)
+          .setValue('Disponible');
+      }
+      SpreadsheetApp.flush();
+      registrarAuditoria_(ses, 'TRASLADO_ANULADO', t.Chasis_VIN, 'ID=' + id + ' Motivo=' + razon);
+    } finally {
+      lock.releaseLock();
+    }
+    return true;
+  });
+}
+
+/**
+ * Bandejas de traslados para el panel del usuario:
+ *  - entrantes: en tránsito hacia MI punto (pendientes de confirmar).
+ *  - salientes: en tránsito despachados DESDE mi punto.
+ *  - historico: últimos movimientos confirmados dentro de mi alcance.
+ *
+ * Los roles globales ven la red completa.
+ */
+function obtenerTraslados(token, filtro) {
+  return ejecutarSeguro_(function () {
+    var ses = validarSesion_(token);
+    filtro = filtro || {};
+    var limiteHistorico = Math.min(parseInt(filtro.limite, 10) || 200, 1000);
+
+    var entrantes = [], salientes = [], historico = [];
+    var tabla = leerTabla_(SHEETS.TRASLADOS);
+
+    for (var i = tabla.filas.length - 1; i >= 0; i--) {
+      var d = tabla.filas[i].datos;
+      var esOrigen  = norm_(d.PDV_Origen) === norm_(ses.pdv);
+      var esDestino = norm_(d.PDV_Destino) === norm_(ses.pdv);
+      if (!esGlobal_(ses) && !esOrigen && !esDestino) continue;
+
+      var item = {
+        ID_Traslado: d.ID_Traslado,
+        Fecha_Despacho: formatearFechaHora_(d.Fecha_Despacho),
+        Fecha_Recepcion: formatearFechaHora_(d.Fecha_Recepcion),
+        Chasis_VIN: d.Chasis_VIN,
+        PDV_Origen: d.PDV_Origen,
+        PDV_Destino: d.PDV_Destino,
+        Usuario_Despacha: d.Usuario_Despacha,
+        Usuario_Recibe: d.Usuario_Recibe,
+        Estado_Traslado: d.Estado_Traslado,
+        Observacion: d.Observacion,
+        diasEnTransito: diasEntre_(d.Fecha_Despacho, new Date())
+      };
+
+      if (norm_(d.Estado_Traslado) === norm_(ESTADOS_TRASLADO.TRANSITO)) {
+        // Los roles globales ven toda la red en la bandeja de pendientes;
+        // el asesor separa lo que debe confirmar (entrantes) de lo despachado.
+        if (esGlobal_(ses) || esDestino) entrantes.push(item);
+        else salientes.push(item);
+      } else if (historico.length < limiteHistorico) {
+        historico.push(item);
+      }
+    }
+
+    return { entrantes: entrantes, salientes: salientes, historico: historico };
+  });
+}
+
+
+/* ===== ReportesService.gs ===== */
+/**
+ * ============================================================================
+ *  NECHIMOTOS CRM  ·  ReportesService.gs
+ * ----------------------------------------------------------------------------
+ *  Agregaciones y métricas ejecutivas para ADMIN / AUXILIAR:
+ *   - Ventas por mes, semana del mes, PDV, marca, línea y asesor.
+ *   - Comparativo de inventario vs. ventas (rotación y días en sala).
+ *   - Ranking de puntos de venta y de asesores.
+ *   - Alertas operativas (traslados vencidos, sobre-stock, baja rotación).
+ *
+ *  Todas las funciones exigen rol global salvo `miDesempeno`, pensada para que
+ *  el asesor consulte únicamente sus propios números.
+ * ============================================================================
+ */
+
+/** Suma 1 a una clave de un mapa acumulador. */
+function acumular_(mapa, clave, incremento) {
+  if (!clave && clave !== 0) clave = 'SIN DATO';
+  mapa[clave] = (mapa[clave] || 0) + (incremento === undefined ? 1 : incremento);
+}
+
+/** Convierte un mapa {clave: valor} en arreglo ordenado descendente. */
+function mapaAArreglo_(mapa, nombreClave) {
+  return Object.keys(mapa).map(function (k) {
+    var o = { total: mapa[k] };
+    o[nombreClave || 'clave'] = k;
+    return o;
+  }).sort(function (a, b) { return b.total - a.total; });
+}
+
+/**
+ * Reporte ejecutivo consolidado.
+ *
+ * @param {string} token Token de sesión (rol global obligatorio).
+ * @param {Object} filtro { ano, mes ('YYYY-MM'), semana, pdv, marca }
+ * @return {Object} estructura lista para renderizar tablas y gráficos.
+ */
+function obtenerReporteEjecutivo(token, filtro) {
+  return ejecutarSeguro_(function () {
+    var ses = validarSesion_(token);
+    exigirGlobal_(ses);
+    filtro = filtro || {};
+
+    var fAno    = filtro.ano ? String(parseInt(filtro.ano, 10)) : '';
+    var fMes    = limpiarTexto_(filtro.mes, 7);
+    var fSemana = limpiarTexto_(filtro.semana, 20);
+    var fPdv    = norm_(filtro.pdv || '');
+    var fMarca  = norm_(filtro.marca || '');
+
+    var porMes = {}, porSemana = {}, porPdv = {}, porMarca = {},
+        porLinea = {}, porAsesor = {}, porTipoVenta = {};
+    var total = 0, diasAcum = 0, aniosDisponibles = {};
+
+    leerTabla_(SHEETS.VENTAS).filas.forEach(function (f) {
+      var d = f.datos;
+      if (d.Ano) aniosDisponibles[String(d.Ano).trim()] = true;
+
+      if (fAno && String(d.Ano).trim() !== fAno) return;
+      if (fMes && String(d.Mes_Venta).trim() !== fMes) return;
+      if (fSemana && norm_(d.Semana_Mes) !== norm_(fSemana)) return;
+      if (fPdv && norm_(d.PDV_Venta) !== fPdv) return;
+      if (fMarca && norm_(d.Marca) !== fMarca) return;
+
+      total++;
+      acumular_(porMes, String(d.Mes_Venta).trim());
+      acumular_(porSemana, String(d.Semana_Mes).trim());
+      acumular_(porPdv, String(d.PDV_Venta).trim());
+      acumular_(porMarca, String(d.Marca).trim());
+      acumular_(porLinea, String(d.Linea_Modelo).trim());
+      acumular_(porAsesor, String(d.Asesor_Vendedor).trim());
+      acumular_(porTipoVenta, String(d.Tipo_Venta).trim());
+
+      var dd = parseInt(d.Dias_Totales_Sala, 10);
+      if (!isNaN(dd)) diasAcum += dd;
+    });
+
+    // Fotografía del inventario activo (no depende del filtro temporal).
+    var stock = { total: 0, porPdv: {}, porMarca: {}, porEstado: {}, envejecido: 0 };
+    var hoy = new Date();
+    leerTabla_(SHEETS.INVENTARIO).filas.forEach(function (f) {
+      var d = f.datos;
+      if (fPdv && norm_(d.PDV_Actual) !== fPdv) return;
+      if (fMarca && norm_(d.Marca) !== fMarca) return;
+      stock.total++;
+      acumular_(stock.porPdv, String(d.PDV_Actual).trim());
+      acumular_(stock.porMarca, String(d.Marca).trim());
+      acumular_(stock.porEstado, String(d.Estado).trim());
+      if (diasEntre_(d.Fecha_Ingreso, hoy) > 60) stock.envejecido++;
+    });
+
+    // Semanas del mes siempre en orden natural, aunque no tengan ventas.
+    var semanasOrdenadas = ['Semana 1', 'Semana 2', 'Semana 3', 'Semana 4', 'Semana 5']
+      .map(function (s) { return { clave: s, total: porSemana[s] || 0 }; });
+
+    return {
+      filtroAplicado: { ano: fAno, mes: fMes, semana: fSemana, pdv: filtro.pdv || '', marca: filtro.marca || '' },
+      aniosDisponibles: Object.keys(aniosDisponibles).sort().reverse(),
+      kpis: {
+        totalVentas: total,
+        promedioDiasSala: total ? Math.round(diasAcum / total) : 0,
+        stockActivo: stock.total,
+        stockEnvejecido: stock.envejecido,
+        rotacion: stock.total ? Math.round((total / stock.total) * 100) : 0
+      },
+      series: {
+        porMes: Object.keys(porMes).sort().map(function (k) { return { clave: k, total: porMes[k] }; }),
+        porSemana: semanasOrdenadas,
+        porPdv: mapaAArreglo_(porPdv),
+        porMarca: mapaAArreglo_(porMarca),
+        porLinea: mapaAArreglo_(porLinea).slice(0, 15),
+        porAsesor: mapaAArreglo_(porAsesor).slice(0, 15),
+        porTipoVenta: mapaAArreglo_(porTipoVenta)
+      },
+      inventario: {
+        porPdv: mapaAArreglo_(stock.porPdv),
+        porMarca: mapaAArreglo_(stock.porMarca),
+        porEstado: mapaAArreglo_(stock.porEstado)
+      }
+    };
+  });
+}
+
+/**
+ * Matriz PDV x Semana del mes seleccionado (tabla cruzada de seguimiento).
+ *
+ * @param {string} mes 'YYYY-MM'. Si se omite se usa el mes en curso.
+ */
+function obtenerMatrizPdvSemana(token, mes) {
+  return ejecutarSeguro_(function () {
+    var ses = validarSesion_(token);
+    exigirGlobal_(ses);
+    var periodo = limpiarTexto_(mes, 7) || calcularMesVenta_(new Date());
+    var semanas = ['Semana 1', 'Semana 2', 'Semana 3', 'Semana 4', 'Semana 5'];
+    var mapa = {};
+
+    leerTabla_(SHEETS.VENTAS).filas.forEach(function (f) {
+      var d = f.datos;
+      if (String(d.Mes_Venta).trim() !== periodo) return;
+      var pdv = String(d.PDV_Venta).trim() || 'SIN DATO';
+      if (!mapa[pdv]) { mapa[pdv] = { pdv: pdv, total: 0 }; semanas.forEach(function (s) { mapa[pdv][s] = 0; }); }
+      var sem = String(d.Semana_Mes).trim();
+      if (semanas.indexOf(sem) === -1) sem = 'Semana 5';
+      mapa[pdv][sem]++;
+      mapa[pdv].total++;
+    });
+
+    var filas = Object.keys(mapa).map(function (k) { return mapa[k]; })
+      .sort(function (a, b) { return b.total - a.total; });
+
+    var totales = { pdv: 'TOTAL RED', total: 0 };
+    semanas.forEach(function (s) { totales[s] = 0; });
+    filas.forEach(function (r) {
+      semanas.forEach(function (s) { totales[s] += r[s]; });
+      totales.total += r.total;
+    });
+
+    return { mes: periodo, semanas: semanas, filas: filas, totales: totales };
+  });
+}
+
+/**
+ * Alertas operativas para la coordinación comercial.
+ *  - Traslados en tránsito con más de 3 días sin confirmar.
+ *  - Unidades con más de 90 días en sala.
+ *  - Puntos sin ventas en el mes en curso.
+ */
+function obtenerAlertas(token) {
+  return ejecutarSeguro_(function () {
+    var ses = validarSesion_(token);
+    exigirGlobal_(ses);
+    var hoy = new Date();
+    var mesActual = calcularMesVenta_(new Date());
+
+    var trasladosVencidos = [];
+    leerTabla_(SHEETS.TRASLADOS).filas.forEach(function (f) {
+      var d = f.datos;
+      if (norm_(d.Estado_Traslado) !== norm_(ESTADOS_TRASLADO.TRANSITO)) return;
+      var dias = diasEntre_(d.Fecha_Despacho, hoy);
+      if (dias >= 3) {
+        trasladosVencidos.push({
+          ID_Traslado: d.ID_Traslado, Chasis_VIN: d.Chasis_VIN,
+          PDV_Origen: d.PDV_Origen, PDV_Destino: d.PDV_Destino,
+          dias: dias, Usuario_Despacha: d.Usuario_Despacha
+        });
+      }
+    });
+
+    var unidadesEnvejecidas = [];
+    leerTabla_(SHEETS.INVENTARIO).filas.forEach(function (f) {
+      var d = f.datos;
+      var dias = diasEntre_(d.Fecha_Ingreso, hoy);
+      if (dias >= 90) {
+        unidadesEnvejecidas.push({
+          Chasis_VIN: d.Chasis_VIN, Marca: d.Marca, Linea_Modelo: d.Linea_Modelo,
+          PDV_Actual: d.PDV_Actual, dias: dias
+        });
+      }
+    });
+    unidadesEnvejecidas.sort(function (a, b) { return b.dias - a.dias; });
+
+    var pdvConVenta = {};
+    leerTabla_(SHEETS.VENTAS).filas.forEach(function (f) {
+      if (String(f.datos.Mes_Venta).trim() === mesActual) {
+        pdvConVenta[norm_(f.datos.PDV_Venta)] = true;
+      }
+    });
+    var pdvSinVentas = CATALOGO_PDV
+      .map(function (p) { return p.nombre; })
+      .filter(function (n) { return !pdvConVenta[norm_(n)]; });
+
+    return {
+      mes: mesActual,
+      trasladosVencidos: trasladosVencidos,
+      unidadesEnvejecidas: unidadesEnvejecidas.slice(0, 50),
+      pdvSinVentas: pdvSinVentas
+    };
+  });
+}
+
+/**
+ * Desempeño individual del asesor autenticado (o del PDV si es asesor).
+ * No requiere rol global: cada quien solo ve lo suyo.
+ */
+function miDesempeno(token, mes) {
+  return ejecutarSeguro_(function () {
+    var ses = validarSesion_(token);
+    var periodo = limpiarTexto_(mes, 7) || calcularMesVenta_(new Date());
+    var mias = 0, delPdv = 0, diasAcum = 0, porLinea = {};
+
+    leerTabla_(SHEETS.VENTAS).filas.forEach(function (f) {
+      var d = f.datos;
+      if (String(d.Mes_Venta).trim() !== periodo) return;
+      if (!puedeVer_(ses, d.PDV_Venta, d.Marca)) return;
+      delPdv++;
+      if (norm_(d.Asesor_Vendedor) === norm_(ses.usuario)) {
+        mias++;
+        acumular_(porLinea, String(d.Linea_Modelo).trim());
+        var dd = parseInt(d.Dias_Totales_Sala, 10);
+        if (!isNaN(dd)) diasAcum += dd;
+      }
+    });
+
+    return {
+      mes: periodo,
+      ventasPropias: mias,
+      ventasPdv: delPdv,
+      promedioDiasSala: mias ? Math.round(diasAcum / mias) : 0,
+      porLinea: mapaAArreglo_(porLinea)
+    };
+  });
+}
+
+/**
+ * Exporta las ventas filtradas como CSV (texto) para descarga desde el cliente.
+ * Evita crear archivos en Drive: cumple con el requisito de costo $0.
+ */
+function exportarVentasCsv(token, filtro) {
+  return ejecutarSeguro_(function () {
+    var ses = validarSesion_(token);
+    exigirGlobal_(ses);
+    var res = obtenerVentas(token, Object.assign({ limite: 3000 }, filtro || {}));
+    if (!res.ok) throw new Error(res.error);
+    var filas = res.data;
+    var cols = COLUMNS.Ventas;
+    var lineas = [cols.join(';')];
+    filas.forEach(function (r) {
+      lineas.push(cols.map(function (c) {
+        return String(r[c] === undefined ? '' : r[c]).replace(/[;\r\n]/g, ' ');
+      }).join(';'));
+    });
+    registrarAuditoria_(ses, 'EXPORTAR_CSV', '', 'Filas exportadas: ' + filas.length);
+    return lineas.join('\n');
+  });
+}
+
+
+/* ===== Setup.gs ===== */
+/**
+ * ============================================================================
+ *  NECHIMOTOS CRM  ·  Setup.gs
+ * ----------------------------------------------------------------------------
+ *  Utilidades de instalación (ejecutar UNA sola vez desde el editor de Apps
+ *  Script, nunca desde la Web App):
+ *
+ *   1. instalarNechimotos()  -> crea `BaseDatos_Nechimotos_Master` con las 5
+ *                               pestañas, encabezados, formatos y validaciones,
+ *                               y guarda su ID en las Propiedades del Script.
+ *   2. crearAdminInicial()   -> crea la primera cuenta ADMIN.
+ *   3. cargarDatosDemo()     -> (opcional) inventario de ejemplo para pruebas.
+ *
+ *  Estas funciones NO están expuestas al frontend.
+ * ============================================================================
+ */
+
+/**
+ * Crea el archivo maestro con sus 5 pestañas y lo deja listo para operar.
+ * Si ya existe un ID configurado, solo verifica/repara la estructura.
+ */
+function instalarNechimotos() {
+  var props = PropertiesService.getScriptProperties();
+  var id = props.getProperty(PROP_SPREADSHEET_ID);
+  var ss;
+
+  if (id) {
+    ss = SpreadsheetApp.openById(id);
+  } else {
+    ss = SpreadsheetApp.create('BaseDatos_Nechimotos_Master');
+    props.setProperty(PROP_SPREADSHEET_ID, ss.getId());
+  }
+  _ssCache = ss;
+  ss.setSpreadsheetTimeZone(TZ);
+
+  Object.keys(COLUMNS).forEach(function (nombre) {
+    var sh = ss.getSheetByName(nombre) || ss.insertSheet(nombre);
+    var esquema = COLUMNS[nombre];
+    sh.getRange(1, 1, 1, esquema.length).setValues([esquema])
+      .setFontWeight('bold')
+      .setBackground('#111827')
+      .setFontColor('#FFFFFF');
+    sh.setFrozenRows(1);
+    sh.autoResizeColumns(1, esquema.length);
+  });
+
+  // Elimina la hoja por defecto "Hoja 1"/"Sheet1" si quedó vacía.
+  ['Hoja 1', 'Hoja1', 'Sheet1'].forEach(function (n) {
+    var sh = ss.getSheetByName(n);
+    if (sh && ss.getSheets().length > 1) ss.deleteSheet(sh);
+  });
+
+  aplicarValidaciones_(ss);
+  aplicarFormatosFecha_(ss);
+  getPepper_(); // genera el pepper si aún no existe
+
+  Logger.log('Archivo maestro listo: ' + ss.getUrl());
+  return ss.getUrl();
+}
+
+/** Listas desplegables en la hoja (protección adicional si alguien edita a mano). */
+function aplicarValidaciones_(ss) {
+  var inv = ss.getSheetByName(SHEETS.INVENTARIO);
+  var filas = 2000;
+
+  var reglaEstado = SpreadsheetApp.newDataValidation()
+    .requireValueInList(ESTADOS_INVENTARIO, true).setAllowInvalid(false).build();
+  inv.getRange(2, COLUMNS.Inventario.indexOf('Estado') + 1, filas).setDataValidation(reglaEstado);
+
+  var reglaMarca = SpreadsheetApp.newDataValidation()
+    .requireValueInList([MARCAS.TVS, MARCAS.MOBILITY], true).setAllowInvalid(false).build();
+  inv.getRange(2, COLUMNS.Inventario.indexOf('Marca') + 1, filas).setDataValidation(reglaMarca);
+
+  var reglaPdv = SpreadsheetApp.newDataValidation()
+    .requireValueInList(CATALOGO_PDV.map(function (p) { return p.nombre; }), true)
+    .setAllowInvalid(false).build();
+  inv.getRange(2, COLUMNS.Inventario.indexOf('PDV_Actual') + 1, filas).setDataValidation(reglaPdv);
+
+  var usr = ss.getSheetByName(SHEETS.USUARIOS);
+  var reglaRol = SpreadsheetApp.newDataValidation()
+    .requireValueInList([ROLES.ADMIN, ROLES.AUXILIAR, ROLES.ASESOR_PDV], true)
+    .setAllowInvalid(false).build();
+  usr.getRange(2, COLUMNS.Usuarios.indexOf('Rol') + 1, 500).setDataValidation(reglaRol);
+}
+
+/** Formatos de fecha coherentes con la zona horaria de Colombia. */
+function aplicarFormatosFecha_(ss) {
+  ss.getSheetByName(SHEETS.INVENTARIO)
+    .getRange(2, COLUMNS.Inventario.indexOf('Fecha_Ingreso') + 1, 2000)
+    .setNumberFormat('yyyy-mm-dd');
+  ss.getSheetByName(SHEETS.VENTAS)
+    .getRange(2, COLUMNS.Ventas.indexOf('Fecha_Venta') + 1, 5000)
+    .setNumberFormat('yyyy-mm-dd hh:mm:ss');
+  ss.getSheetByName(SHEETS.TRASLADOS)
+    .getRange(2, COLUMNS.Traslados.indexOf('Fecha_Despacho') + 1, 5000, 2)
+    .setNumberFormat('yyyy-mm-dd hh:mm:ss');
+  ss.getSheetByName(SHEETS.AUDITORIA)
+    .getRange(2, 1, 20000)
+    .setNumberFormat('yyyy-mm-dd hh:mm:ss');
+}
+
+/**
+ * Crea la cuenta ADMIN inicial.
+ * EDITE las constantes antes de ejecutar y cambie la contraseña tras el
+ * primer ingreso (Auth.cambiarMiPassword).
+ */
+function crearAdminInicial() {
+  var USUARIO = 'admin.nechimotos';
+  var PASSWORD = 'CambiarEstaClave2026*';
+
+  if (buscarUsuario_(USUARIO)) {
+    Logger.log('El usuario ADMIN ya existe. No se hizo nada.');
+    return;
+  }
+  anexarFila_(SHEETS.USUARIOS, {
+    ID_Usuario: 'U-ADMIN-001',
+    Usuario: USUARIO,
+    Password_Hash: hashPassword(USUARIO, PASSWORD),
+    Rol: ROLES.ADMIN,
+    PDV_Asignado: 'RED NACIONAL',
+    Marca_Permitida: 'TODAS',
+    Estado_Cuenta: 'Activo'
+  });
+  Logger.log('ADMIN creado: ' + USUARIO + ' — cambie la contraseña al ingresar.');
+}
+
+/**
+ * Carga inventario de ejemplo para validar la aplicación en pruebas.
+ * NO ejecutar en producción.
+ */
+function cargarDatosDemo() {
+  var demo = [
+    ['MD625GF12N1234567', 'GF1AN1234567', 'TVS', 'Raider 125 FI', 2026, 'Rojo', 'MAJAGUAL'],
+    ['MD625GF12N1234568', 'GF1AN1234568', 'TVS', 'NTORQ 125 XConnect', 2026, 'Negro', 'MAJAGUAL'],
+    ['MD625GF12N1234569', 'GF1AN1234569', 'TVS', 'Apache RTR 160 4V', 2025, 'Azul', 'MONTELIBANO TVS'],
+    ['9C2KC2200NR000001', 'KC22NR000001', 'AUTECO MOBILITY', 'MRX 150', 2026, 'Blanco', 'BANCO MOBILITY'],
+    ['9C2KC2200NR000002', 'KC22NR000002', 'AUTECO MOBILITY', 'Agility Fusion', 2026, 'Gris', 'BANCO MOBILITY']
+  ];
+  var hoy = new Date();
+  demo.forEach(function (d, i) {
+    if (buscarUnidadPorVin_(d[0])) return;
+    var ingreso = new Date(hoy.getTime() - (i + 1) * 12 * 86400000);
+    anexarFila_(SHEETS.INVENTARIO, {
+      Chasis_VIN: d[0], Motor: d[1], Marca: d[2], Linea_Modelo: d[3],
+      Modelo_Ano: d[4], Color: d[5], Fecha_Ingreso: ingreso, PDV_Actual: d[6],
+      Estado: 'Disponible', Asesor_Asignado: 'Sin asignar', Observacion: 'Carga demo'
+    });
+  });
+  Logger.log('Datos demo cargados.');
+}
+
+sembrarDemo();
+</script>
+<!--
+  ==========================================================================
+   NECHIMOTOS CRM · AppJs.html
+   Controladores del cliente: sesión, navegación, inventario, ventas,
+   traslados y usuarios. Toda comunicación con el backend `.gs` se hace con
+   google.script.run envuelto en promesas (helper `api`).
+
+   El cliente NUNCA decide permisos: solo pinta lo que el servidor devuelve.
+  ==========================================================================
+-->
+<script>
+/* ======================================================================
+ *  0. ESTADO GLOBAL Y UTILIDADES
+ * ==================================================================== */
+const App = {
+  token: null,
+  perfil: null,
+  catalogos: null,
+  cache: { inventario: [], traslados: null, ventas: [] },
+  vista: 'dashboard'
+};
+
+const $  = (sel, ctx) => (ctx || document).querySelector(sel);
+const $$ = (sel, ctx) => Array.from((ctx || document).querySelectorAll(sel));
+
+/** Escapa HTML para impedir inyección desde datos de la hoja. */
+function esc(v) {
+  return String(v === null || v === undefined ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+/**
+ * Envoltura de google.script.run en Promise.
+ * Resuelve el `data` del contrato { ok, data|error } y rechaza en error.
+ */
+function api(fn, ...args) {
+  return new Promise((resolve, reject) => {
+    google.script.run
+      .withSuccessHandler(res => {
+        if (!res) return reject(new Error('Respuesta vacía del servidor.'));
+        if (res.ok) return resolve(res.data);
+        if (String(res.error).indexOf('SESION_INVALIDA') === 0) { cerrarPorSesion(); }
+        reject(new Error(limpiarMensaje(res.error)));
+      })
+      .withFailureHandler(err => reject(new Error(err && err.message ? err.message : 'Fallo de conexión.')))
+      [fn](...args);
+  });
+}
+
+/** Quita los prefijos técnicos de los mensajes controlados del servidor. */
+function limpiarMensaje(msg) {
+  return String(msg || 'Error desconocido.')
+    .replace(/^(SESION_INVALIDA|PERMISO_DENEGADO|DATO_INVALIDO|REGLA_NEGOCIO):?\s*/, '');
+}
+
+/** Notificación flotante. tipo: ok | err | warn | info */
+function toast(titulo, detalle, tipo) {
+  const el = document.createElement('div');
+  el.className = 'toast ' + (tipo || '');
+  el.innerHTML = '<strong>' + esc(titulo) + '</strong>' +
+                 (detalle ? '<span>' + esc(detalle) + '</span>' : '');
+  $('#toasts').appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 4200);
+}
+
+/** Bloquea un botón mientras dura una operación asíncrona. */
+async function conCarga(boton, tarea) {
+  const original = boton ? boton.innerHTML : null;
+  if (boton) { boton.disabled = true; boton.innerHTML = '<span class="loader"></span> Procesando'; }
+  try { return await tarea(); }
+  finally { if (boton) { boton.disabled = false; boton.innerHTML = original; } }
+}
+
+function filaVacia(tbody, colspan, mensaje) {
+  tbody.innerHTML = '<tr><td class="empty" colspan="' + colspan + '">' + esc(mensaje) + '</td></tr>';
+}
+
+/** Clase CSS del badge según el estado de inventario. */
+function claseEstado(estado) {
+  const e = String(estado || '').toUpperCase();
+  if (e === 'DISPONIBLE') return 'disponible';
+  if (e === 'EN TRASLADO') return 'traslado';
+  if (e === 'CONSIGNACION') return 'consignacion';
+  if (e === 'TEST DRIVE') return 'test';
+  return 'neutro';
+}
+function claseMarca(marca) {
+  return String(marca || '').toUpperCase() === 'TVS' ? 'tvs' : 'mobility';
+}
+
+/* ======================================================================
+ *  1. SESIÓN
+ * ==================================================================== */
+$('#loginForm').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const msg = $('#loginMsg');
+  msg.textContent = '';
+  try {
+    await conCarga($('#btnLogin'), async () => {
+      const r = await api('login', $('#inpUsuario').value, $('#inpPassword').value);
+      App.token = r.token;
+      App.perfil = r.perfil;
+      try { sessionStorage.setItem('nechi_token', r.token); } catch (e) { /* modo privado */ }
+      $('#inpPassword').value = '';
+      await iniciarApp();
+    });
+  } catch (e) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = e.message;
+  }
+});
+
+$('#btnLogout').addEventListener('click', async () => {
+  try { await api('logout', App.token); } catch (e) { /* sesión ya expirada */ }
+  cerrarPorSesion(true);
+});
+
+function cerrarPorSesion(silencioso) {
+  try { sessionStorage.removeItem('nechi_token'); } catch (e) {}
+  App.token = null; App.perfil = null;
+  $('#appView').hidden = true;
+  $('#loginView').hidden = false;
+  if (!silencioso) toast('Sesión finalizada', 'Vuelva a ingresar para continuar.', 'warn');
+}
+
+/** Intenta restaurar la sesión al recargar la página. */
+(async function arranque() {
+  let token = null;
+  try { token = sessionStorage.getItem('nechi_token'); } catch (e) {}
+  if (!token) return;
+  try {
+    const r = await api('restaurarSesion', token);
+    App.token = r.token; App.perfil = r.perfil;
+    await iniciarApp();
+  } catch (e) { cerrarPorSesion(true); }
+})();
+
+/** Prepara la interfaz una vez autenticado. */
+async function iniciarApp() {
+  $('#loginView').hidden = true;
+  $('#appView').hidden = false;
+
+  const p = App.perfil;
+  $('#sideUsuario').textContent = p.usuario;
+  $('#sideRol').textContent = p.rol + (p.esGlobal ? '' : ' · ' + p.marca);
+  $('#sideCtx').textContent = p.pdv;
+  $('#chipPdv').textContent = p.pdv;
+
+  // Menús exclusivos de jefatura/coordinación.
+  $$('.admin-only').forEach(el => { el.hidden = !p.esGlobal; });
+  // La gestión de usuarios es exclusiva de ADMIN.
+  const btnUsuarios = $('.nav-btn[data-view="usuarios"]');
+  if (btnUsuarios) btnUsuarios.hidden = (p.rol !== 'ADMIN');
+
+  App.catalogos = await api('obtenerCatalogos', App.token);
+  poblarFiltros();
+  irA('dashboard');
+}
+
+/* ======================================================================
+ *  2. NAVEGACIÓN E INTERFAZ
+ * ==================================================================== */
+const TITULOS = {
+  dashboard: 'Dashboard', inventario: 'Inventario', traslados: 'Traslados',
+  ventas: 'Ventas', reportes: 'Reportes ejecutivos', auditoria: 'Auditoría',
+  usuarios: 'Gestión de usuarios'
+};
+
+$$('.nav-btn[data-view]').forEach(btn => {
+  btn.addEventListener('click', () => irA(btn.dataset.view));
+});
+
+function irA(vista) {
+  App.vista = vista;
+  $$('.view').forEach(v => { v.hidden = (v.id !== 'view-' + vista); });
+  $$('.nav-btn[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === vista));
+  $('#viewTitle').textContent = TITULOS[vista] || 'Nechimotos';
+  $('#sidebar').classList.remove('open');
+  cargarVista(vista);
+}
+
+async function cargarVista(vista) {
+  try {
+    switch (vista) {
+      case 'dashboard':  await cargarDashboard(); break;
+      case 'inventario': await cargarInventario(); break;
+      case 'traslados':  await cargarTraslados(); break;
+      case 'ventas':     await cargarVentas(); break;
+      case 'reportes':   await Reportes.generar(); break;
+      case 'auditoria':  await Reportes.cargarAuditoria(); break;
+      case 'usuarios':   await cargarUsuarios(); break;
+    }
+  } catch (e) { toast('No se pudo cargar', e.message, 'err'); }
+}
+
+$('#btnMenu').addEventListener('click', () => $('#sidebar').classList.toggle('open'));
+$('#btnRefrescar').addEventListener('click', () => cargarVista(App.vista));
+
+// Tema claro / oscuro persistente en el navegador.
+$('#btnTema').addEventListener('click', () => {
+  const actual = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
+  document.body.dataset.theme = actual;
+  try { localStorage.setItem('nechi_tema', actual); } catch (e) {}
+});
+try {
+  const t = localStorage.getItem('nechi_tema');
+  if (t) document.body.dataset.theme = t;
+  else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    document.body.dataset.theme = 'dark';
+  }
+} catch (e) {}
+
+/** Rellena los selectores dependientes del perfil y los catálogos. */
+function poblarFiltros() {
+  const pdvs = App.catalogos.pdvs.map(p => p.nombre);
+  const marcas = App.catalogos.marcas;
+
+  const setOpts = (sel, valores, etiquetaTodos) => {
+    const el = $(sel); if (!el) return;
+    el.innerHTML = '<option value="">' + etiquetaTodos + '</option>' +
+      valores.map(v => '<option value="' + esc(v) + '">' + esc(v) + '</option>').join('');
+  };
+
+  setOpts('#fInvPdv', pdvs, 'Todos los PDV');
+  setOpts('#fInvMarca', marcas, 'Todas las marcas');
+  setOpts('#fInvEstado', App.catalogos.estados, 'Todos los estados');
+  setOpts('#fVenPdv', pdvs, 'Todos los PDV');
+  setOpts('#fVenMarca', marcas, 'Todas las marcas');
+  setOpts('#fRepPdv', pdvs, 'Toda la red');
+  setOpts('#fRepMarca', marcas, 'Todas las marcas');
+}
+
+/* ======================================================================
+ *  3. DASHBOARD
+ * ==================================================================== */
+async function cargarDashboard() {
+  const [inv, ventas, tras] = await Promise.all([
+    api('obtenerInventario', App.token, {}),
+    api('resumenVentasMesActual', App.token),
+    api('obtenerTraslados', App.token, { limite: 20 })
+  ]);
+  App.cache.inventario = inv.filas;
+  App.cache.traslados = tras;
+  actualizarBadgeTraslados(tras.entrantes.length);
+
+  const r = inv.resumen;
+  $('#kpiGrid').innerHTML = [
+    kpi('Stock activo', r.total, r.disponible + ' disponibles', ''),
+    kpi('Ventas del mes ' + ventas.mes, ventas.total,
+        'TVS ' + ventas.tvs + ' · Mobility ' + ventas.mobility, 'ok'),
+    kpi('En traslado', r.enTraslado, tras.entrantes.length + ' por confirmar', 'warn'),
+    kpi('Prom. días en sala', ventas.promedioDiasSala, r.mas60 + ' unidades con +60 días', 'info')
+  ].join('');
+
+  // Traslados pendientes (acceso rápido desde el dashboard).
+  const tb = $('#tbodyDashTraslados');
+  if (!tras.entrantes.length) filaVacia(tb, 4, 'Sin traslados pendientes.');
+  else tb.innerHTML = tras.entrantes.slice(0, 6).map(t => `
+    <tr>
+      <td><strong>${esc(t.Chasis_VIN)}</strong></td>
+      <td>${esc(t.PDV_Origen)}</td>
+      <td>${esc(t.diasEnTransito)}</td>
+      <td><button class="btn sm ok" data-recibir="${esc(t.ID_Traslado)}">Confirmar</button></td>
+    </tr>`).join('');
+
+  // Unidades más antiguas en sala.
+  const tb2 = $('#tbodyDashAntiguos');
+  const antiguos = inv.filas.slice(0, 6);
+  if (!antiguos.length) filaVacia(tb2, 3, 'Sin unidades en inventario.');
+  else tb2.innerHTML = antiguos.map(u => `
+    <tr>
+      <td><strong>${esc(u.Chasis_VIN)}</strong></td>
+      <td>${esc(u.Linea_Modelo)}</td>
+      <td class="num">${esc(u.Dias_en_Sala)}</td>
+    </tr>`).join('');
+}
+
+function kpi(label, valor, pie, clase) {
+  return `<div class="kpi ${clase}">
+    <div class="kpi-label">${esc(label)}</div>
+    <div class="kpi-value">${esc(valor)}</div>
+    <div class="kpi-foot">${esc(pie)}</div>
+  </div>`;
+}
+
+function actualizarBadgeTraslados(n) {
+  const b = $('#badgeTraslados');
+  b.hidden = !n; b.textContent = n;
+}
+
+/* ======================================================================
+ *  4. INVENTARIO
+ * ==================================================================== */
+$('#btnFiltrarInv').addEventListener('click', () => cargarInventario());
+$('#fInvTexto').addEventListener('keyup', e => { if (e.key === 'Enter') cargarInventario(); });
+
+async function cargarInventario() {
+  const tb = $('#tbodyInventario');
+  filaVacia(tb, 8, 'Cargando...');
+  const filtro = {
+    texto:  $('#fInvTexto').value,
+    pdv:    $('#fInvPdv').value,
+    marca:  $('#fInvMarca').value,
+    estado: $('#fInvEstado').value
+  };
+  const res = await api('obtenerInventario', App.token, filtro);
+  App.cache.inventario = res.filas;
+  $('#invCount').textContent = res.filas.length + ' unidades';
+
+  if (!res.filas.length) { filaVacia(tb, 8, 'No hay unidades que cumplan el filtro.'); return; }
+
+  tb.innerHTML = res.filas.map(u => {
+    const enTraslado = String(u.Estado).toUpperCase() === 'EN TRASLADO';
+    return `<tr>
+      <td><strong>${esc(u.Chasis_VIN)}</strong><br><span class="muted">${esc(u.Motor)}</span></td>
+      <td><span class="badge ${claseMarca(u.Marca)}">${esc(u.Marca)}</span></td>
+      <td>${esc(u.Linea_Modelo)}<br><span class="muted">${esc(u.Modelo_Ano)}</span></td>
+      <td>${esc(u.Color)}</td>
+      <td>${esc(u.PDV_Actual)}</td>
+      <td><span class="badge ${claseEstado(u.Estado)}">${esc(u.Estado)}</span></td>
+      <td class="num">${esc(u.Dias_en_Sala)}</td>
+      <td style="white-space:nowrap">
+        <button class="btn sm ok" data-vender="${esc(u.Chasis_VIN)}" ${enTraslado ? 'disabled' : ''}>Vender</button>
+        <button class="btn sm ghost" data-despachar="${esc(u.Chasis_VIN)}" ${enTraslado ? 'disabled' : ''}>Trasladar</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+/* ======================================================================
+ *  5. MODALES GENÉRICOS
+ * ==================================================================== */
+function abrirModal(titulo, subtitulo, cuerpoHtml, acciones) {
+  cerrarModal();
+  const host = $('#modalHost');
+  const back = document.createElement('div');
+  back.className = 'modal-backdrop';
+  back.innerHTML = `
+    <div class="modal" role="dialog" aria-modal="true">
+      <h3>${esc(titulo)}</h3>
+      <p class="muted">${esc(subtitulo || '')}</p>
+      <div class="form-grid">${cuerpoHtml}</div>
+      <div class="modal-actions">
+        <button class="btn ghost" data-cerrar>Cancelar</button>
+        ${acciones}
+      </div>
+    </div>`;
+  back.addEventListener('click', ev => { if (ev.target === back) cerrarModal(); });
+  host.appendChild(back);
+  return back;
+}
+function cerrarModal() { $('#modalHost').innerHTML = ''; }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarModal(); });
+
+/* Delegación global de acciones (botones generados dinámicamente). */
+document.addEventListener('click', async (ev) => {
+  const t = ev.target.closest('button');
+  if (!t) return;
+  if (t.hasAttribute('data-cerrar')) return cerrarModal();
+  if (t.dataset.vender)      return modalVenta(t.dataset.vender);
+  if (t.dataset.despachar)   return modalDespacho(t.dataset.despachar);
+  if (t.dataset.recibir)     return modalRecepcion(t.dataset.recibir);
+  if (t.dataset.anular)      return modalAnularTraslado(t.dataset.anular);
+  if (t.dataset.estadoUser)  return toggleUsuario(t.dataset.estadoUser, t.dataset.nuevo);
+  if (t.dataset.resetUser)   return modalResetPassword(t.dataset.resetUser);
+});
+
+/* ======================================================================
+ *  6. VENTA (Regla 6.A)
+ * ==================================================================== */
+function modalVenta(vin) {
+  const u = App.cache.inventario.find(x => x.Chasis_VIN === vin) || { Chasis_VIN: vin };
+  const tipos = (App.catalogos.tiposVenta || []).map(t => `<option>${esc(t)}</option>`).join('');
+  const back = abrirModal('Registrar venta', 'El servidor calcula automáticamente mes, semana y días en sala.', `
+    <div class="field full">
+      <label>Unidad</label>
+      <input value="${esc(u.Chasis_VIN)} · ${esc(u.Linea_Modelo || '')} ${esc(u.Color || '')}" disabled>
+    </div>
+    <div class="field"><label>Tipo de venta *</label><select id="mvTipo">${tipos}</select></div>
+    <div class="field"><label>Asesor vendedor</label>
+      <input id="mvAsesor" value="${esc(u.Asesor_Asignado || App.perfil.usuario)}"></div>
+    <div class="field full"><label>Observación</label>
+      <textarea id="mvObs" placeholder="Datos del cliente, referencia de factura, etc."></textarea></div>
+  `, '<button class="btn ok" id="mvConfirmar">Confirmar venta</button>');
+
+  $('#mvConfirmar', back).addEventListener('click', async (e) => {
+    try {
+      await conCarga(e.target, async () => {
+        const r = await api('registrarVenta', App.token, {
+          vin: vin,
+          tipoVenta: $('#mvTipo').value,
+          asesor: $('#mvAsesor').value,
+          observacion: $('#mvObs').value
+        });
+        cerrarModal();
+        toast('Venta registrada · ' + r.ID_Venta,
+              r.Mes_Venta + ' · ' + r.Semana_Mes + ' · ' + r.Dias_Totales_Sala + ' días en sala', 'ok');
+        await cargarVista(App.vista);
+      });
+    } catch (err) { toast('No se pudo registrar', err.message, 'err'); }
+  });
+}
+
+/* ======================================================================
+ *  7. TRASLADOS (Regla 6.B · protocolo de 2 pasos)
+ * ==================================================================== */
+async function modalDespacho(vin) {
+  let info;
+  try { info = await api('obtenerDestinosValidos', App.token, vin); }
+  catch (e) { return toast('No se pudo preparar el traslado', e.message, 'err'); }
+
+  const opciones = info.destinos.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
+  const back = abrirModal('Despachar traslado (Paso 1)',
+    'Solo se listan puntos homologados para la marca ' + info.marca + '.', `
+    <div class="field full"><label>Chasis</label><input value="${esc(vin)}" disabled></div>
+    <div class="field"><label>PDV origen</label><input value="${esc(info.origen)}" disabled></div>
+    <div class="field"><label>PDV destino *</label><select id="mtDestino">${opciones}</select></div>
+    <div class="field full"><label>Observación</label>
+      <textarea id="mtObs" placeholder="Transportadora, guía, responsable..."></textarea></div>
+  `, '<button class="btn warnb" id="mtConfirmar">Despachar</button>');
+
+  $('#mtConfirmar', back).addEventListener('click', async (e) => {
+    try {
+      await conCarga(e.target, async () => {
+        const r = await api('despacharTraslado', App.token, {
+          vin: vin, pdvDestino: $('#mtDestino').value, observacion: $('#mtObs').value
+        });
+        cerrarModal();
+        toast('Traslado ' + r.ID_Traslado + ' en tránsito',
+              r.PDV_Origen + ' → ' + r.PDV_Destino, 'ok');
+        await cargarVista(App.vista);
+      });
+    } catch (err) { toast('No se pudo despachar', err.message, 'err'); }
+  });
+}
+
+function modalRecepcion(idTraslado) {
+  const back = abrirModal('Confirmar recepción (Paso 2)',
+    'Al confirmar, la unidad queda Disponible en su punto de venta.', `
+    <div class="field full"><label>Traslado</label><input value="${esc(idTraslado)}" disabled></div>
+    <div class="field full"><label>Observación de recepción</label>
+      <textarea id="mrObs" placeholder="Estado físico, novedades del transporte..."></textarea></div>
+  `, '<button class="btn ok" id="mrConfirmar">Confirmar recepción</button>');
+
+  $('#mrConfirmar', back).addEventListener('click', async (e) => {
+    try {
+      await conCarga(e.target, async () => {
+        const r = await api('confirmarRecepcion', App.token, idTraslado, $('#mrObs').value);
+        cerrarModal();
+        toast('Recepción confirmada', r.Chasis_VIN + ' ahora en ' + r.PDV_Destino, 'ok');
+        await cargarVista(App.vista);
+      });
+    } catch (err) { toast('No se pudo confirmar', err.message, 'err'); }
+  });
+}
+
+function modalAnularTraslado(idTraslado) {
+  const back = abrirModal('Anular traslado', 'La unidad vuelve a Disponible en el punto de origen.', `
+    <div class="field full"><label>Traslado</label><input value="${esc(idTraslado)}" disabled></div>
+    <div class="field full"><label>Motivo *</label>
+      <textarea id="maObs" placeholder="Explique por qué se anula el despacho."></textarea></div>
+  `, '<button class="btn danger" id="maConfirmar">Anular</button>');
+
+  $('#maConfirmar', back).addEventListener('click', async (e) => {
+    try {
+      await conCarga(e.target, async () => {
+        await api('anularTraslado', App.token, idTraslado, $('#maObs').value);
+        cerrarModal();
+        toast('Traslado anulado', 'La unidad regresó a su punto de origen.', 'warn');
+        await cargarVista(App.vista);
+      });
+    } catch (err) { toast('No se pudo anular', err.message, 'err'); }
+  });
+}
+
+async function cargarTraslados() {
+  const data = await api('obtenerTraslados', App.token, { limite: 200 });
+  App.cache.traslados = data;
+  actualizarBadgeTraslados(data.entrantes.length);
+
+  const tbE = $('#tbodyEntrantes');
+  if (!data.entrantes.length) filaVacia(tbE, 8, 'No hay traslados pendientes de confirmar.');
+  else tbE.innerHTML = data.entrantes.map(t => `
+    <tr>
+      <td>${esc(t.ID_Traslado)}</td>
+      <td><strong>${esc(t.Chasis_VIN)}</strong></td>
+      <td>${esc(t.PDV_Origen)}</td>
+      <td>${esc(t.PDV_Destino)}</td>
+      <td>${esc(t.Usuario_Despacha)}</td>
+      <td>${esc(t.Fecha_Despacho)}</td>
+      <td class="num">${esc(t.diasEnTransito)}</td>
+      <td><button class="btn sm ok" data-recibir="${esc(t.ID_Traslado)}">Confirmar</button></td>
+    </tr>`).join('');
+
+  const tbS = $('#tbodySalientes');
+  if (!data.salientes.length) filaVacia(tbS, 6, 'Sin despachos en tránsito.');
+  else tbS.innerHTML = data.salientes.map(t => `
+    <tr>
+      <td>${esc(t.ID_Traslado)}</td>
+      <td><strong>${esc(t.Chasis_VIN)}</strong></td>
+      <td>${esc(t.PDV_Destino)}</td>
+      <td>${esc(t.Fecha_Despacho)}</td>
+      <td class="num">${esc(t.diasEnTransito)}</td>
+      <td><button class="btn sm ghost" data-anular="${esc(t.ID_Traslado)}">Anular</button></td>
+    </tr>`).join('');
+
+  const tbH = $('#tbodyHistTraslados');
+  if (!data.historico.length) filaVacia(tbH, 7, 'Sin histórico de traslados.');
+  else tbH.innerHTML = data.historico.map(t => `
+    <tr>
+      <td>${esc(t.ID_Traslado)}</td>
+      <td><strong>${esc(t.Chasis_VIN)}</strong></td>
+      <td>${esc(t.PDV_Origen)}</td>
+      <td>${esc(t.PDV_Destino)}</td>
+      <td>${esc(t.Fecha_Despacho)}</td>
+      <td>${esc(t.Fecha_Recepcion)}</td>
+      <td><span class="badge ${String(t.Estado_Traslado).toUpperCase() === 'CONFIRMADO' ? 'disponible' : 'rojo'}">${esc(t.Estado_Traslado)}</span></td>
+    </tr>`).join('');
+}
+
+/* ======================================================================
+ *  8. VENTAS
+ * ==================================================================== */
+$('#btnFiltrarVentas').addEventListener('click', () => cargarVentas());
+
+async function cargarVentas() {
+  const tb = $('#tbodyVentas');
+  filaVacia(tb, 11, 'Cargando...');
+  const filtro = {
+    mes: $('#fVenMes').value,
+    semana: $('#fVenSemana').value,
+    pdv: $('#fVenPdv').value,
+    marca: $('#fVenMarca').value,
+    texto: $('#fVenTexto').value,
+    limite: 800
+  };
+  const filas = await api('obtenerVentas', App.token, filtro);
+  App.cache.ventas = filas;
+  $('#venCount').textContent = filas.length + ' ventas';
+  if (!filas.length) { filaVacia(tb, 11, 'Sin ventas para el filtro aplicado.'); return; }
+
+  tb.innerHTML = filas.map(v => `
+    <tr>
+      <td>${esc(v.ID_Venta)}</td>
+      <td>${esc(v.Fecha_Venta)}</td>
+      <td>${esc(v.Mes_Venta)}</td>
+      <td>${esc(v.Semana_Mes)}</td>
+      <td><strong>${esc(v.Chasis_VIN)}</strong></td>
+      <td><span class="badge ${claseMarca(v.Marca)}">${esc(v.Marca)}</span></td>
+      <td>${esc(v.Linea_Modelo)}</td>
+      <td>${esc(v.PDV_Venta)}</td>
+      <td>${esc(v.Asesor_Vendedor)}</td>
+      <td>${esc(v.Tipo_Venta)}</td>
+      <td class="num">${esc(v.Dias_Totales_Sala)}</td>
+    </tr>`).join('');
+}
+
+/* ======================================================================
+ *  9. INGRESO DE UNIDADES
+ * ==================================================================== */
+$('#btnNuevaUnidad').addEventListener('click', () => {
+  const marcas = App.catalogos.marcas;
+  const pdvs = App.catalogos.pdvs.map(p => p.nombre);
+  const hoy = new Date().toISOString().slice(0, 10);
+
+  const back = abrirModal('Ingresar unidad al inventario', 'La unidad queda en estado Disponible.', `
+    <div class="field"><label>Chasis (VIN) *</label><input id="muVin" placeholder="MD625..."></div>
+    <div class="field"><label>Motor</label><input id="muMotor"></div>
+    <div class="field"><label>Marca *</label>
+      <select id="muMarca">${marcas.map(m => `<option>${esc(m)}</option>`).join('')}</select></div>
+    <div class="field"><label>Línea / Modelo *</label><select id="muLinea"></select></div>
+    <div class="field"><label>Modelo año *</label>
+      <input id="muAno" type="number" value="${new Date().getFullYear()}" min="2000"></div>
+    <div class="field"><label>Color</label><input id="muColor"></div>
+    <div class="field"><label>PDV *</label>
+      <select id="muPdv" ${App.perfil.esGlobal ? '' : 'disabled'}>
+        ${pdvs.map(p => `<option>${esc(p)}</option>`).join('')}</select></div>
+    <div class="field"><label>Fecha de ingreso</label><input id="muFecha" type="date" value="${hoy}"></div>
+    <div class="field full"><label>Observación</label><textarea id="muObs"></textarea></div>
+  `, '<button class="btn" id="muGuardar">Ingresar unidad</button>');
+
+  const pintarLineas = () => {
+    const lineas = App.catalogos.lineas[$('#muMarca').value] || [];
+    $('#muLinea').innerHTML = lineas.map(l => `<option>${esc(l)}</option>`).join('');
+  };
+  $('#muMarca', back).addEventListener('change', pintarLineas);
+  pintarLineas();
+
+  $('#muGuardar', back).addEventListener('click', async (e) => {
+    try {
+      await conCarga(e.target, async () => {
+        await api('ingresarUnidad', App.token, {
+          vin: $('#muVin').value, motor: $('#muMotor').value, marca: $('#muMarca').value,
+          linea: $('#muLinea').value, modeloAno: $('#muAno').value, color: $('#muColor').value,
+          pdv: $('#muPdv').value, fechaIngreso: $('#muFecha').value, observacion: $('#muObs').value
+        });
+        cerrarModal();
+        toast('Unidad ingresada', 'Ya está disponible en el inventario.', 'ok');
+        await cargarInventario();
+      });
+    } catch (err) { toast('No se pudo ingresar', err.message, 'err'); }
+  });
+});
+
+/* ======================================================================
+ *  10. USUARIOS (ADMIN)
+ * ==================================================================== */
+async function cargarUsuarios() {
+  const tb = $('#tbodyUsuarios');
+  filaVacia(tb, 7, 'Cargando...');
+  const filas = await api('listarUsuarios', App.token);
+  if (!filas.length) { filaVacia(tb, 7, 'No hay usuarios registrados.'); return; }
+  tb.innerHTML = filas.map(u => {
+    const activo = String(u.Estado_Cuenta).toUpperCase() === 'ACTIVO';
+    return `<tr>
+      <td>${esc(u.ID_Usuario)}</td>
+      <td><strong>${esc(u.Usuario)}</strong></td>
+      <td><span class="badge neutro">${esc(u.Rol)}</span></td>
+      <td>${esc(u.PDV_Asignado)}</td>
+      <td>${esc(u.Marca_Permitida)}</td>
+      <td><span class="badge ${activo ? 'disponible' : 'rojo'}">${esc(u.Estado_Cuenta)}</span></td>
+      <td style="white-space:nowrap">
+        <button class="btn sm ghost" data-reset-user="${esc(u.Usuario)}">Clave</button>
+        <button class="btn sm ${activo ? 'danger' : 'ok'}"
+                data-estado-user="${esc(u.Usuario)}" data-nuevo="${activo ? 'Inactivo' : 'Activo'}">
+          ${activo ? 'Desactivar' : 'Activar'}</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+$('#btnNuevoUsuario').addEventListener('click', () => {
+  const pdvs = (App.perfil.catalogoPdv || []).map(p => p.nombre);
+  const back = abrirModal('Crear usuario', 'La contraseña se almacena solo como hash SHA-256.', `
+    <div class="field"><label>Usuario *</label><input id="cuUsuario" placeholder="nombre.apellido"></div>
+    <div class="field"><label>Contraseña * (mín. 8)</label><input id="cuPass" type="password"></div>
+    <div class="field"><label>Rol *</label><select id="cuRol">
+      <option>ASESOR_PDV</option><option>AUXILIAR</option><option>ADMIN</option></select></div>
+    <div class="field"><label>Marca permitida *</label><select id="cuMarca">
+      <option>TVS</option><option>MOBILITY</option><option>TODAS</option></select></div>
+    <div class="field full"><label>PDV asignado *</label><select id="cuPdv">
+      ${pdvs.map(p => `<option>${esc(p)}</option>`).join('')}</select></div>
+  `, '<button class="btn" id="cuGuardar">Crear</button>');
+
+  $('#cuGuardar', back).addEventListener('click', async (e) => {
+    try {
+      await conCarga(e.target, async () => {
+        await api('crearUsuario', App.token, {
+          usuario: $('#cuUsuario').value, password: $('#cuPass').value,
+          rol: $('#cuRol').value, marca: $('#cuMarca').value, pdv: $('#cuPdv').value
+        });
+        cerrarModal();
+        toast('Usuario creado', 'Ya puede iniciar sesión.', 'ok');
+        await cargarUsuarios();
+      });
+    } catch (err) { toast('No se pudo crear', err.message, 'err'); }
+  });
+});
+
+async function toggleUsuario(usuario, nuevo) {
+  try {
+    await api('cambiarEstadoUsuario', App.token, usuario, nuevo);
+    toast('Cuenta actualizada', usuario + ' → ' + nuevo, 'ok');
+    await cargarUsuarios();
+  } catch (e) { toast('No se pudo actualizar', e.message, 'err'); }
+}
+
+function modalResetPassword(usuario) {
+  const back = abrirModal('Restablecer contraseña', 'Usuario: ' + usuario, `
+    <div class="field full"><label>Nueva contraseña (mín. 8)</label>
+      <input id="rpPass" type="password"></div>
+  `, '<button class="btn" id="rpGuardar">Restablecer</button>');
+
+  $('#rpGuardar', back).addEventListener('click', async (e) => {
+    try {
+      await conCarga(e.target, async () => {
+        await api('restablecerPassword', App.token, usuario, $('#rpPass').value);
+        cerrarModal();
+        toast('Contraseña restablecida', usuario, 'ok');
+      });
+    } catch (err) { toast('No se pudo restablecer', err.message, 'err'); }
+  });
+}
+
+/* Cambio de contraseña propio */
+$('#btnPassword').addEventListener('click', () => {
+  const back = abrirModal('Cambiar mi contraseña', 'Se solicita la contraseña actual por seguridad.', `
+    <div class="field full"><label>Contraseña actual</label><input id="cpActual" type="password"></div>
+    <div class="field full"><label>Nueva contraseña (mín. 8)</label><input id="cpNueva" type="password"></div>
+  `, '<button class="btn" id="cpGuardar">Actualizar</button>');
+
+  $('#cpGuardar', back).addEventListener('click', async (e) => {
+    try {
+      await conCarga(e.target, async () => {
+        await api('cambiarMiPassword', App.token, $('#cpActual').value, $('#cpNueva').value);
+        cerrarModal();
+        toast('Contraseña actualizada', 'Use la nueva clave en su próximo ingreso.', 'ok');
+      });
+    } catch (err) { toast('No se pudo cambiar', err.message, 'err'); }
+  });
+});
+</script>
+
+<!--
+  ==========================================================================
+   NECHIMOTOS CRM · ReportesJs.html
+   Renderizado del módulo ejecutivo (ADMIN / AUXILIAR):
+     · KPIs consolidados
+     · Gráficos de barras dibujados con CSS puro (sin librerías externas,
+       coherente con el requisito de costo $0 y carga ligera en móvil)
+     · Matriz PDV × Semana, alertas operativas y consulta de auditoría
+  ==========================================================================
+-->
+<script>
+const Reportes = (function () {
+
+  /**
+   * Dibuja un gráfico de barras horizontal dentro de un contenedor.
+   * @param {string} sel      Selector del contenedor.
+   * @param {Array}  datos    [{ clave, total }]
+   * @param {Object} opciones { azul: boolean, max: number, vacio: string }
+   */
+  function barras(sel, datos, opciones) {
+    const cont = $(sel);
+    if (!cont) return;
+    opciones = opciones || {};
+    if (!datos || !datos.length) {
+      cont.innerHTML = '<p class="empty">' + esc(opciones.vacio || 'Sin datos para el filtro.') + '</p>';
+      return;
+    }
+    const max = opciones.max || Math.max.apply(null, datos.map(d => d.total)) || 1;
+    cont.innerHTML = datos.map(d => {
+      const pct = Math.round((d.total / max) * 100);
+      return `<div class="bar-row">
+        <span class="bar-label" title="${esc(d.clave)}">${esc(d.clave)}</span>
+        <span class="bar-track"><span class="bar-fill ${opciones.azul ? 'azul' : ''}" style="width:${pct}%"></span></span>
+        <span class="bar-value">${esc(d.total)}</span>
+      </div>`;
+    }).join('');
+  }
+
+  /** Lee los filtros del formulario de reportes. */
+  function filtros() {
+    return {
+      ano: $('#fRepAno').value,
+      mes: $('#fRepMes').value,
+      semana: $('#fRepSemana').value,
+      pdv: $('#fRepPdv').value,
+      marca: $('#fRepMarca').value
+    };
+  }
+
+  /** Genera el reporte ejecutivo completo. */
+  async function generar() {
+    if (!App.perfil || !App.perfil.esGlobal) return;
+    const f = filtros();
+    const [rep, matriz, alertas] = await Promise.all([
+      api('obtenerReporteEjecutivo', App.token, f),
+      api('obtenerMatrizPdvSemana', App.token, f.mes),
+      api('obtenerAlertas', App.token)
+    ]);
+
+    // Años disponibles (se llena una sola vez con lo que exista en Ventas).
+    const selAno = $('#fRepAno');
+    if (selAno.options.length <= 1 && rep.aniosDisponibles.length) {
+      selAno.innerHTML = '<option value="">Todos</option>' +
+        rep.aniosDisponibles.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join('');
+      selAno.value = f.ano || '';
+    }
+
+    const k = rep.kpis;
+    $('#repKpis').innerHTML = [
+      kpi('Ventas del periodo', k.totalVentas, 'Según filtros aplicados', 'ok'),
+      kpi('Promedio días en sala', k.promedioDiasSala, 'Rotación comercial', 'info'),
+      kpi('Stock activo', k.stockActivo, k.stockEnvejecido + ' con +60 días', ''),
+      kpi('Índice de rotación', k.rotacion + '%', 'Ventas / stock activo', 'warn')
+    ].join('');
+
+    barras('#chartMes', rep.series.porMes);
+    barras('#chartSemana', rep.series.porSemana, { azul: true });
+    barras('#chartPdv', rep.series.porPdv);
+    barras('#chartMarca', rep.series.porMarca, { azul: true });
+    barras('#chartLinea', rep.series.porLinea);
+    barras('#chartAsesor', rep.series.porAsesor, { azul: true });
+
+    pintarMatriz(matriz);
+    pintarAlertas(alertas);
+  }
+
+  /** Tabla cruzada PDV × Semana con fila de totales. */
+  function pintarMatriz(m) {
+    $('#matrizMes').textContent = 'Periodo: ' + m.mes;
+    const tb = $('#tbodyMatriz');
+    if (!m.filas.length) { filaVacia(tb, 7, 'Sin ventas registradas en el periodo.'); return; }
+    const fila = r => `<tr>
+      <td><strong>${esc(r.pdv)}</strong></td>
+      ${m.semanas.map(s => `<td class="num">${esc(r[s])}</td>`).join('')}
+      <td class="num"><strong>${esc(r.total)}</strong></td>
+    </tr>`;
+    tb.innerHTML = m.filas.map(fila).join('') +
+      `<tr style="background:var(--surface-2)">
+        <td><strong>${esc(m.totales.pdv)}</strong></td>
+        ${m.semanas.map(s => `<td class="num"><strong>${esc(m.totales[s])}</strong></td>`).join('')}
+        <td class="num"><strong>${esc(m.totales.total)}</strong></td>
+      </tr>`;
+  }
+
+  /** Alertas operativas de la coordinación comercial. */
+  function pintarAlertas(a) {
+    const t1 = $('#tbodyAlertaTraslados');
+    if (!a.trasladosVencidos.length) filaVacia(t1, 4, 'Sin traslados vencidos. ✔');
+    else t1.innerHTML = a.trasladosVencidos.map(t => `
+      <tr>
+        <td>${esc(t.ID_Traslado)}</td>
+        <td><strong>${esc(t.Chasis_VIN)}</strong></td>
+        <td>${esc(t.PDV_Origen)} → ${esc(t.PDV_Destino)}</td>
+        <td class="num"><span class="badge rojo">${esc(t.dias)}</span></td>
+      </tr>`).join('');
+
+    const t2 = $('#tbodyAlertaStock');
+    if (!a.unidadesEnvejecidas.length) filaVacia(t2, 4, 'Sin unidades con más de 90 días. ✔');
+    else t2.innerHTML = a.unidadesEnvejecidas.map(u => `
+      <tr>
+        <td><strong>${esc(u.Chasis_VIN)}</strong></td>
+        <td>${esc(u.Linea_Modelo)}</td>
+        <td>${esc(u.PDV_Actual)}</td>
+        <td class="num"><span class="badge ${u.dias > 120 ? 'rojo' : 'traslado'}">${esc(u.dias)}</span></td>
+      </tr>`).join('');
+
+    const chips = $('#chipsPdvSinVentas');
+    chips.innerHTML = a.pdvSinVentas.length
+      ? a.pdvSinVentas.map(p => `<span class="chip">${esc(p)}</span>`).join('')
+      : '<span class="muted">Todos los puntos registran ventas este mes. ✔</span>';
+  }
+
+  /* -------------------------------------------------------------------
+   *  AUDITORÍA
+   * ----------------------------------------------------------------- */
+  async function cargarAuditoria() {
+    const tb = $('#tbodyAuditoria');
+    filaVacia(tb, 7, 'Cargando...');
+    const filas = await api('consultarAuditoria', App.token, {
+      usuario: $('#fAudUsuario').value,
+      accion: $('#fAudAccion').value,
+      desde: $('#fAudDesde').value,
+      hasta: $('#fAudHasta').value,
+      limite: 300
+    });
+    if (!filas.length) { filaVacia(tb, 7, 'Sin registros para el filtro.'); return; }
+    tb.innerHTML = filas.map(r => `
+      <tr>
+        <td style="white-space:nowrap">${esc(r.Timestamp)}</td>
+        <td><strong>${esc(r.Usuario)}</strong></td>
+        <td><span class="badge neutro">${esc(r.Rol)}</span></td>
+        <td>${esc(r.PDV)}</td>
+        <td><span class="badge ${claseAccion(r.Accion_Realizada)}">${esc(r.Accion_Realizada)}</span></td>
+        <td>${esc(r.Chasis_Afectado)}</td>
+        <td class="muted">${esc(r.Detalle)}</td>
+      </tr>`).join('');
+  }
+
+  /** Color del badge según el tipo de acción auditada. */
+  function claseAccion(accion) {
+    const a = String(accion || '').toUpperCase();
+    if (a.indexOf('DENEGADO') !== -1 || a.indexOf('FALLIDO') !== -1 || a.indexOf('BLOQUEADO') !== -1) return 'rojo';
+    if (a.indexOf('VENTA') !== -1) return 'disponible';
+    if (a.indexOf('TRASLADO') !== -1) return 'traslado';
+    if (a.indexOf('LOGIN') !== -1 || a.indexOf('LOGOUT') !== -1) return 'consignacion';
+    return 'neutro';
+  }
+
+  /* -------------------------------------------------------------------
+   *  EXPORTACIÓN CSV (descarga generada en el navegador, sin Drive)
+   * ----------------------------------------------------------------- */
+  async function exportarVentas() {
+    const csv = await api('exportarVentasCsv', App.token, {
+      mes: $('#fVenMes').value, semana: $('#fVenSemana').value,
+      pdv: $('#fVenPdv').value, marca: $('#fVenMarca').value, texto: $('#fVenTexto').value
+    });
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Ventas_Nechimotos_' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  return { generar, cargarAuditoria, exportarVentas, barras };
+})();
+
+/* --------------------------- Enlaces de UI ---------------------------- */
+$('#btnGenerarReporte').addEventListener('click', async (e) => {
+  try { await conCarga(e.target, () => Reportes.generar()); }
+  catch (err) { toast('No se pudo generar el reporte', err.message, 'err'); }
+});
+
+$('#btnFiltrarAud').addEventListener('click', async (e) => {
+  try { await conCarga(e.target, () => Reportes.cargarAuditoria()); }
+  catch (err) { toast('No se pudo consultar', err.message, 'err'); }
+});
+
+$('#btnExportarVentas').addEventListener('click', async (e) => {
+  try { await conCarga(e.target, () => Reportes.exportarVentas()); }
+  catch (err) { toast('No se pudo exportar', err.message, 'err'); }
+});
+</script>
+
+<div style="position:fixed;left:0;right:0;bottom:0;z-index:200;background:#111827;color:#fff;
+            font:500 12.5px/1.45 system-ui,sans-serif;padding:9px 14px;text-align:center">
+  <strong>MODO DEMOSTRACIÓN</strong> — datos ficticios en memoria, se reinician al recargar.
+  Usuarios: <code>admin.nechimotos</code> / <code>CambiarEstaClave2026*</code> ·
+  <code>asesor.montelibano</code>, <code>asesor.banco</code>, <code>asesor.majagual</code>,
+  <code>coordinador</code> / <code>Demo12345</code>
+</div>
+<style>body{padding-bottom:46px}.toasts{bottom:58px!important}</style>
+</body>
+</html>

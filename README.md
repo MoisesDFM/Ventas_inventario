@@ -34,6 +34,26 @@ Proyecto_Nechimotos_CRM/
 └── appsscript.json       Manifiesto (zona horaria, scopes, despliegue web)
 ```
 
+## Ver la aplicación sin desplegarla
+
+`demo/index.html` es un archivo autocontenido que ejecuta la aplicación completa
+en el navegador: el backend `.gs` real corriendo sobre dobles de prueba de los
+servicios de Google (`demo/mock-appsscript.js`), con inventario, ventas y un
+traslado en tránsito de ejemplo. Ábralo con doble clic; no necesita servidor,
+cuenta de Google ni conexión. Los datos viven en memoria y se reinician al recargar.
+
+Usuarios de la demostración:
+
+| Usuario | Contraseña | Rol / alcance |
+|---|---|---|
+| `admin.nechimotos` | `CambiarEstaClave2026*` | ADMIN · red completa |
+| `coordinador` | `Demo12345` | AUXILIAR · red completa |
+| `asesor.majagual` | `Demo12345` | ASESOR_PDV · MAJAGUAL (ambas marcas) |
+| `asesor.montelibano` | `Demo12345` | ASESOR_PDV · MONTELIBANO TVS |
+| `asesor.banco` | `Demo12345` | ASESOR_PDV · BANCO MOBILITY |
+
+Para regenerarlo después de tocar el código: `node demo/generar-demo.js`.
+
 ## Instalación (una sola vez)
 
 1. Cree un proyecto en [script.google.com](https://script.google.com) y suba los
