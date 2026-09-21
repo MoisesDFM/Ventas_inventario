@@ -1,0 +1,703 @@
+<!--
+  ==========================================================================
+   NECHIMOTOS CRM · AppJs.html
+   Controladores del cliente: sesión, navegación, inventario, ventas,
+   traslados y usuarios. Toda comunicación con el backend `.gs` se hace con
+   google.script.run envuelto en promesas (helper `api`).
+
+   El cliente NUNCA decide permisos: solo pinta lo que el servidor devuelve.
+  ==========================================================================
+-->
+<script>
+/* ======================================================================
+ *  0. ESTADO GLOBAL Y UTILIDADES
+ * ==================================================================== */
+const App = {
+  token: null,
+  perfil: null,
+  catalogos: null,
+  cache: { inventario: [], traslados: null, ventas: [] },
+  vista: 'dashboard'
+};
+
+const $  = (sel, ctx) => (ctx || document).querySelector(sel);
+const $$ = (sel, ctx) => Array.from((ctx || document).querySelectorAll(sel));
+
+/** Escapa HTML para impedir inyección desde datos de la hoja. */
+function esc(v) {
+  return String(v === null || v === undefined ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+/**
+ * Envoltura de google.script.run en Promise.
+ * Resuelve el `data` del contrato { ok, data|error } y rechaza en error.
+ */
+function api(fn, ...args) {
+  return new Promise((resolve, reject) => {
+    google.script.run
+      .withSuccessHandler(res => {
+        if (!res) return reject(new Error('Respuesta vacía del servidor.'));
+        if (res.ok) return resolve(res.data);
+        if (String(res.error).indexOf('SESION_INVALIDA') === 0) { cerrarPorSesion(); }
+        reject(new Error(limpiarMensaje(res.error)));
+      })
+      .withFailureHandler(err => reject(new Error(err && err.message ? err.message : 'Fallo de conexión.')))
+      [fn](...args);
+  });
+}
+
+/** Quita los prefijos técnicos de los mensajes controlados del servidor. */
+function limpiarMensaje(msg) {
+  return String(msg || 'Error desconocido.')
+    .replace(/^(SESION_INVALIDA|PERMISO_DENEGADO|DATO_INVALIDO|REGLA_NEGOCIO):?\s*/, '');
+}
+
+/** Notificación flotante. tipo: ok | err | warn | info */
+function toast(titulo, detalle, tipo) {
+  const el = document.createElement('div');
+  el.className = 'toast ' + (tipo || '');
+  el.innerHTML = '<strong>' + esc(titulo) + '</strong>' +
+                 (detalle ? '<span>' + esc(detalle) + '</span>' : '');
+  $('#toasts').appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 4200);
+}
+
+/** Bloquea un botón mientras dura una operación asíncrona. */
+async function conCarga(boton, tarea) {
+  const original = boton ? boton.innerHTML : null;
+  if (boton) { boton.disabled = true; boton.innerHTML = '<span class="loader"></span> Procesando'; }
+  try { return await tarea(); }
+  finally { if (boton) { boton.disabled = false; boton.innerHTML = original; } }
+}
+
+function filaVacia(tbody, colspan, mensaje) {
+  tbody.innerHTML = '<tr><td class="empty" colspan="' + colspan + '">' + esc(mensaje) + '</td></tr>';
+}
+
+/** Clase CSS del badge según el estado de inventario. */
+function claseEstado(estado) {
+  const e = String(estado || '').toUpperCase();
+  if (e === 'DISPONIBLE') return 'disponible';
+  if (e === 'EN TRASLADO') return 'traslado';
+  if (e === 'CONSIGNACION') return 'consignacion';
+  if (e === 'TEST DRIVE') return 'test';
+  return 'neutro';
+}
+function claseMarca(marca) {
+  return String(marca || '').toUpperCase() === 'TVS' ? 'tvs' : 'mobility';
+}
+
+/* ======================================================================
+ *  1. SESIÓN
+ * ==================================================================== */
+$('#loginForm').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const msg = $('#loginMsg');
+  msg.textContent = '';
+  try {
+    await conCarga($('#btnLogin'), async () => {
+      const r = await api('login', $('#inpUsuario').value, $('#inpPassword').value);
+      App.token = r.token;
+      App.perfil = r.perfil;
+      try { sessionStorage.setItem('nechi_token', r.token); } catch (e) { /* modo privado */ }
+      $('#inpPassword').value = '';
+      await iniciarApp();
+    });
+  } catch (e) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = e.message;
+  }
+});
+
+$('#btnLogout').addEventListener('click', async () => {
+  try { await api('logout', App.token); } catch (e) { /* sesión ya expirada */ }
+  cerrarPorSesion(true);
+});
+
+function cerrarPorSesion(silencioso) {
+  try { sessionStorage.removeItem('nechi_token'); } catch (e) {}
+  App.token = null; App.perfil = null;
+  $('#appView').hidden = true;
+  $('#loginView').hidden = false;
+  if (!silencioso) toast('Sesión finalizada', 'Vuelva a ingresar para continuar.', 'warn');
+}
+
+/** Intenta restaurar la sesión al recargar la página. */
+(async function arranque() {
+  let token = null;
+  try { token = sessionStorage.getItem('nechi_token'); } catch (e) {}
+  if (!token) return;
+  try {
+    const r = await api('restaurarSesion', token);
+    App.token = r.token; App.perfil = r.perfil;
+    await iniciarApp();
+  } catch (e) { cerrarPorSesion(true); }
+})();
+
+/** Prepara la interfaz una vez autenticado. */
+async function iniciarApp() {
+  $('#loginView').hidden = true;
+  $('#appView').hidden = false;
+
+  const p = App.perfil;
+  $('#sideUsuario').textContent = p.usuario;
+  $('#sideRol').textContent = p.rol + (p.esGlobal ? '' : ' · ' + p.marca);
+  $('#sideCtx').textContent = p.pdv;
+  $('#chipPdv').textContent = p.pdv;
+
+  // Menús exclusivos de jefatura/coordinación.
+  $$('.admin-only').forEach(el => { el.hidden = !p.esGlobal; });
+  // La gestión de usuarios es exclusiva de ADMIN.
+  const btnUsuarios = $('.nav-btn[data-view="usuarios"]');
+  if (btnUsuarios) btnUsuarios.hidden = (p.rol !== 'ADMIN');
+
+  App.catalogos = await api('obtenerCatalogos', App.token);
+  poblarFiltros();
+  irA('dashboard');
+}
+
+/* ======================================================================
+ *  2. NAVEGACIÓN E INTERFAZ
+ * ==================================================================== */
+const TITULOS = {
+  dashboard: 'Dashboard', inventario: 'Inventario', traslados: 'Traslados',
+  ventas: 'Ventas', reportes: 'Reportes ejecutivos', auditoria: 'Auditoría',
+  usuarios: 'Gestión de usuarios'
+};
+
+$$('.nav-btn[data-view]').forEach(btn => {
+  btn.addEventListener('click', () => irA(btn.dataset.view));
+});
+
+function irA(vista) {
+  App.vista = vista;
+  $$('.view').forEach(v => { v.hidden = (v.id !== 'view-' + vista); });
+  $$('.nav-btn[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === vista));
+  $('#viewTitle').textContent = TITULOS[vista] || 'Nechimotos';
+  $('#sidebar').classList.remove('open');
+  cargarVista(vista);
+}
+
+async function cargarVista(vista) {
+  try {
+    switch (vista) {
+      case 'dashboard':  await cargarDashboard(); break;
+      case 'inventario': await cargarInventario(); break;
+      case 'traslados':  await cargarTraslados(); break;
+      case 'ventas':     await cargarVentas(); break;
+      case 'reportes':   await Reportes.generar(); break;
+      case 'auditoria':  await Reportes.cargarAuditoria(); break;
+      case 'usuarios':   await cargarUsuarios(); break;
+    }
+  } catch (e) { toast('No se pudo cargar', e.message, 'err'); }
+}
+
+$('#btnMenu').addEventListener('click', () => $('#sidebar').classList.toggle('open'));
+$('#btnRefrescar').addEventListener('click', () => cargarVista(App.vista));
+
+// Tema claro / oscuro persistente en el navegador.
+$('#btnTema').addEventListener('click', () => {
+  const actual = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
+  document.body.dataset.theme = actual;
+  try { localStorage.setItem('nechi_tema', actual); } catch (e) {}
+});
+try {
+  const t = localStorage.getItem('nechi_tema');
+  if (t) document.body.dataset.theme = t;
+  else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    document.body.dataset.theme = 'dark';
+  }
+} catch (e) {}
+
+/** Rellena los selectores dependientes del perfil y los catálogos. */
+function poblarFiltros() {
+  const pdvs = App.catalogos.pdvs.map(p => p.nombre);
+  const marcas = App.catalogos.marcas;
+
+  const setOpts = (sel, valores, etiquetaTodos) => {
+    const el = $(sel); if (!el) return;
+    el.innerHTML = '<option value="">' + etiquetaTodos + '</option>' +
+      valores.map(v => '<option value="' + esc(v) + '">' + esc(v) + '</option>').join('');
+  };
+
+  setOpts('#fInvPdv', pdvs, 'Todos los PDV');
+  setOpts('#fInvMarca', marcas, 'Todas las marcas');
+  setOpts('#fInvEstado', App.catalogos.estados, 'Todos los estados');
+  setOpts('#fVenPdv', pdvs, 'Todos los PDV');
+  setOpts('#fVenMarca', marcas, 'Todas las marcas');
+  setOpts('#fRepPdv', pdvs, 'Toda la red');
+  setOpts('#fRepMarca', marcas, 'Todas las marcas');
+}
+
+/* ======================================================================
+ *  3. DASHBOARD
+ * ==================================================================== */
+async function cargarDashboard() {
+  const [inv, ventas, tras] = await Promise.all([
+    api('obtenerInventario', App.token, {}),
+    api('resumenVentasMesActual', App.token),
+    api('obtenerTraslados', App.token, { limite: 20 })
+  ]);
+  App.cache.inventario = inv.filas;
+  App.cache.traslados = tras;
+  actualizarBadgeTraslados(tras.entrantes.length);
+
+  const r = inv.resumen;
+  $('#kpiGrid').innerHTML = [
+    kpi('Stock activo', r.total, r.disponible + ' disponibles', ''),
+    kpi('Ventas del mes ' + ventas.mes, ventas.total,
+        'TVS ' + ventas.tvs + ' · Mobility ' + ventas.mobility, 'ok'),
+    kpi('En traslado', r.enTraslado, tras.entrantes.length + ' por confirmar', 'warn'),
+    kpi('Prom. días en sala', ventas.promedioDiasSala, r.mas60 + ' unidades con +60 días', 'info')
+  ].join('');
+
+  // Traslados pendientes (acceso rápido desde el dashboard).
+  const tb = $('#tbodyDashTraslados');
+  if (!tras.entrantes.length) filaVacia(tb, 4, 'Sin traslados pendientes.');
+  else tb.innerHTML = tras.entrantes.slice(0, 6).map(t => `
+    <tr>
+      <td><strong>${esc(t.Chasis_VIN)}</strong></td>
+      <td>${esc(t.PDV_Origen)}</td>
+      <td>${esc(t.diasEnTransito)}</td>
+      <td><button class="btn sm ok" data-recibir="${esc(t.ID_Traslado)}">Confirmar</button></td>
+    </tr>`).join('');
+
+  // Unidades más antiguas en sala.
+  const tb2 = $('#tbodyDashAntiguos');
+  const antiguos = inv.filas.slice(0, 6);
+  if (!antiguos.length) filaVacia(tb2, 3, 'Sin unidades en inventario.');
+  else tb2.innerHTML = antiguos.map(u => `
+    <tr>
+      <td><strong>${esc(u.Chasis_VIN)}</strong></td>
+      <td>${esc(u.Linea_Modelo)}</td>
+      <td class="num">${esc(u.Dias_en_Sala)}</td>
+    </tr>`).join('');
+}
+
+function kpi(label, valor, pie, clase) {
+  return `<div class="kpi ${clase}">
+    <div class="kpi-label">${esc(label)}</div>
+    <div class="kpi-value">${esc(valor)}</div>
+    <div class="kpi-foot">${esc(pie)}</div>
+  </div>`;
+}
+
+function actualizarBadgeTraslados(n) {
+  const b = $('#badgeTraslados');
+  b.hidden = !n; b.textContent = n;
+}
+
+/* ======================================================================
+ *  4. INVENTARIO
+ * ==================================================================== */
+$('#btnFiltrarInv').addEventListener('click', () => cargarInventario());
+$('#fInvTexto').addEventListener('keyup', e => { if (e.key === 'Enter') cargarInventario(); });
+
+async function cargarInventario() {
+  const tb = $('#tbodyInventario');
+  filaVacia(tb, 8, 'Cargando...');
+  const filtro = {
+    texto:  $('#fInvTexto').value,
+    pdv:    $('#fInvPdv').value,
+    marca:  $('#fInvMarca').value,
+    estado: $('#fInvEstado').value
+  };
+  const res = await api('obtenerInventario', App.token, filtro);
+  App.cache.inventario = res.filas;
+  $('#invCount').textContent = res.filas.length + ' unidades';
+
+  if (!res.filas.length) { filaVacia(tb, 8, 'No hay unidades que cumplan el filtro.'); return; }
+
+  tb.innerHTML = res.filas.map(u => {
+    const enTraslado = String(u.Estado).toUpperCase() === 'EN TRASLADO';
+    return `<tr>
+      <td><strong>${esc(u.Chasis_VIN)}</strong><br><span class="muted">${esc(u.Motor)}</span></td>
+      <td><span class="badge ${claseMarca(u.Marca)}">${esc(u.Marca)}</span></td>
+      <td>${esc(u.Linea_Modelo)}<br><span class="muted">${esc(u.Modelo_Ano)}</span></td>
+      <td>${esc(u.Color)}</td>
+      <td>${esc(u.PDV_Actual)}</td>
+      <td><span class="badge ${claseEstado(u.Estado)}">${esc(u.Estado)}</span></td>
+      <td class="num">${esc(u.Dias_en_Sala)}</td>
+      <td style="white-space:nowrap">
+        <button class="btn sm ok" data-vender="${esc(u.Chasis_VIN)}" ${enTraslado ? 'disabled' : ''}>Vender</button>
+        <button class="btn sm ghost" data-despachar="${esc(u.Chasis_VIN)}" ${enTraslado ? 'disabled' : ''}>Trasladar</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+/* ======================================================================
+ *  5. MODALES GENÉRICOS
+ * ==================================================================== */
+function abrirModal(titulo, subtitulo, cuerpoHtml, acciones) {
+  cerrarModal();
+  const host = $('#modalHost');
+  const back = document.createElement('div');
+  back.className = 'modal-backdrop';
+  back.innerHTML = `
+    <div class="modal" role="dialog" aria-modal="true">
+      <h3>${esc(titulo)}</h3>
+      <p class="muted">${esc(subtitulo || '')}</p>
+      <div class="form-grid">${cuerpoHtml}</div>
+      <div class="modal-actions">
+        <button class="btn ghost" data-cerrar>Cancelar</button>
+        ${acciones}
+      </div>
+    </div>`;
+  back.addEventListener('click', ev => { if (ev.target === back) cerrarModal(); });
+  host.appendChild(back);
+  return back;
+}
+function cerrarModal() { $('#modalHost').innerHTML = ''; }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarModal(); });
+
+/* Delegación global de acciones (botones generados dinámicamente). */
+document.addEventListener('click', async (ev) => {
+  const t = ev.target.closest('button');
+  if (!t) return;
+  if (t.hasAttribute('data-cerrar')) return cerrarModal();
+  if (t.dataset.vender)      return modalVenta(t.dataset.vender);
+  if (t.dataset.despachar)   return modalDespacho(t.dataset.despachar);
+  if (t.dataset.recibir)     return modalRecepcion(t.dataset.recibir);
+  if (t.dataset.anular)      return modalAnularTraslado(t.dataset.anular);
+  if (t.dataset.estadoUser)  return toggleUsuario(t.dataset.estadoUser, t.dataset.nuevo);
+  if (t.dataset.resetUser)   return modalResetPassword(t.dataset.resetUser);
+});
+
+/* ======================================================================
+ *  6. VENTA (Regla 6.A)
+ * ==================================================================== */
+function modalVenta(vin) {
+  const u = App.cache.inventario.find(x => x.Chasis_VIN === vin) || { Chasis_VIN: vin };
+  const tipos = (App.catalogos.tiposVenta || []).map(t => `<option>${esc(t)}</option>`).join('');
+  const back = abrirModal('Registrar venta', 'El servidor calcula automáticamente mes, semana y días en sala.', `
+    <div class="field full">
+      <label>Unidad</label>
+      <input value="${esc(u.Chasis_VIN)} · ${esc(u.Linea_Modelo || '')} ${esc(u.Color || '')}" disabled>
+    </div>
+    <div class="field"><label>Tipo de venta *</label><select id="mvTipo">${tipos}</select></div>
+    <div class="field"><label>Asesor vendedor</label>
+      <input id="mvAsesor" value="${esc(u.Asesor_Asignado || App.perfil.usuario)}"></div>
+    <div class="field full"><label>Observación</label>
+      <textarea id="mvObs" placeholder="Datos del cliente, referencia de factura, etc."></textarea></div>
+  `, '<button class="btn ok" id="mvConfirmar">Confirmar venta</button>');
+
+  $('#mvConfirmar', back).addEventListener('click', async (e) => {
+    try {
+      await conCarga(e.target, async () => {
+        const r = await api('registrarVenta', App.token, {
+          vin: vin,
+          tipoVenta: $('#mvTipo').value,
+          asesor: $('#mvAsesor').value,
+          observacion: $('#mvObs').value
+        });
+        cerrarModal();
+        toast('Venta registrada · ' + r.ID_Venta,
+              r.Mes_Venta + ' · ' + r.Semana_Mes + ' · ' + r.Dias_Totales_Sala + ' días en sala', 'ok');
+        await cargarVista(App.vista);
+      });
+    } catch (err) { toast('No se pudo registrar', err.message, 'err'); }
+  });
+}
+
+/* ======================================================================
+ *  7. TRASLADOS (Regla 6.B · protocolo de 2 pasos)
+ * ==================================================================== */
+async function modalDespacho(vin) {
+  let info;
+  try { info = await api('obtenerDestinosValidos', App.token, vin); }
+  catch (e) { return toast('No se pudo preparar el traslado', e.message, 'err'); }
+
+  const opciones = info.destinos.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
+  const back = abrirModal('Despachar traslado (Paso 1)',
+    'Solo se listan puntos homologados para la marca ' + info.marca + '.', `
+    <div class="field full"><label>Chasis</label><input value="${esc(vin)}" disabled></div>
+    <div class="field"><label>PDV origen</label><input value="${esc(info.origen)}" disabled></div>
+    <div class="field"><label>PDV destino *</label><select id="mtDestino">${opciones}</select></div>
+    <div class="field full"><label>Observación</label>
+      <textarea id="mtObs" placeholder="Transportadora, guía, responsable..."></textarea></div>
+  `, '<button class="btn warnb" id="mtConfirmar">Despachar</button>');
+
+  $('#mtConfirmar', back).addEventListener('click', async (e) => {
+    try {
+      await conCarga(e.target, async () => {
+        const r = await api('despacharTraslado', App.token, {
+          vin: vin, pdvDestino: $('#mtDestino').value, observacion: $('#mtObs').value
+        });
+        cerrarModal();
+        toast('Traslado ' + r.ID_Traslado + ' en tránsito',
+              r.PDV_Origen + ' → ' + r.PDV_Destino, 'ok');
+        await cargarVista(App.vista);
+      });
+    } catch (err) { toast('No se pudo despachar', err.message, 'err'); }
+  });
+}
+
+function modalRecepcion(idTraslado) {
+  const back = abrirModal('Confirmar recepción (Paso 2)',
+    'Al confirmar, la unidad queda Disponible en su punto de venta.', `
+    <div class="field full"><label>Traslado</label><input value="${esc(idTraslado)}" disabled></div>
+    <div class="field full"><label>Observación de recepción</label>
+      <textarea id="mrObs" placeholder="Estado físico, novedades del transporte..."></textarea></div>
+  `, '<button class="btn ok" id="mrConfirmar">Confirmar recepción</button>');
+
+  $('#mrConfirmar', back).addEventListener('click', async (e) => {
+    try {
+      await conCarga(e.target, async () => {
+        const r = await api('confirmarRecepcion', App.token, idTraslado, $('#mrObs').value);
+        cerrarModal();
+        toast('Recepción confirmada', r.Chasis_VIN + ' ahora en ' + r.PDV_Destino, 'ok');
+        await cargarVista(App.vista);
+      });
+    } catch (err) { toast('No se pudo confirmar', err.message, 'err'); }
+  });
+}
+
+function modalAnularTraslado(idTraslado) {
+  const back = abrirModal('Anular traslado', 'La unidad vuelve a Disponible en el punto de origen.', `
+    <div class="field full"><label>Traslado</label><input value="${esc(idTraslado)}" disabled></div>
+    <div class="field full"><label>Motivo *</label>
+      <textarea id="maObs" placeholder="Explique por qué se anula el despacho."></textarea></div>
+  `, '<button class="btn danger" id="maConfirmar">Anular</button>');
+
+  $('#maConfirmar', back).addEventListener('click', async (e) => {
+    try {
+      await conCarga(e.target, async () => {
+        await api('anularTraslado', App.token, idTraslado, $('#maObs').value);
+        cerrarModal();
+        toast('Traslado anulado', 'La unidad regresó a su punto de origen.', 'warn');
+        await cargarVista(App.vista);
+      });
+    } catch (err) { toast('No se pudo anular', err.message, 'err'); }
+  });
+}
+
+async function cargarTraslados() {
+  const data = await api('obtenerTraslados', App.token, { limite: 200 });
+  App.cache.traslados = data;
+  actualizarBadgeTraslados(data.entrantes.length);
+
+  const tbE = $('#tbodyEntrantes');
+  if (!data.entrantes.length) filaVacia(tbE, 8, 'No hay traslados pendientes de confirmar.');
+  else tbE.innerHTML = data.entrantes.map(t => `
+    <tr>
+      <td>${esc(t.ID_Traslado)}</td>
+      <td><strong>${esc(t.Chasis_VIN)}</strong></td>
+      <td>${esc(t.PDV_Origen)}</td>
+      <td>${esc(t.PDV_Destino)}</td>
+      <td>${esc(t.Usuario_Despacha)}</td>
+      <td>${esc(t.Fecha_Despacho)}</td>
+      <td class="num">${esc(t.diasEnTransito)}</td>
+      <td><button class="btn sm ok" data-recibir="${esc(t.ID_Traslado)}">Confirmar</button></td>
+    </tr>`).join('');
+
+  const tbS = $('#tbodySalientes');
+  if (!data.salientes.length) filaVacia(tbS, 6, 'Sin despachos en tránsito.');
+  else tbS.innerHTML = data.salientes.map(t => `
+    <tr>
+      <td>${esc(t.ID_Traslado)}</td>
+      <td><strong>${esc(t.Chasis_VIN)}</strong></td>
+      <td>${esc(t.PDV_Destino)}</td>
+      <td>${esc(t.Fecha_Despacho)}</td>
+      <td class="num">${esc(t.diasEnTransito)}</td>
+      <td><button class="btn sm ghost" data-anular="${esc(t.ID_Traslado)}">Anular</button></td>
+    </tr>`).join('');
+
+  const tbH = $('#tbodyHistTraslados');
+  if (!data.historico.length) filaVacia(tbH, 7, 'Sin histórico de traslados.');
+  else tbH.innerHTML = data.historico.map(t => `
+    <tr>
+      <td>${esc(t.ID_Traslado)}</td>
+      <td><strong>${esc(t.Chasis_VIN)}</strong></td>
+      <td>${esc(t.PDV_Origen)}</td>
+      <td>${esc(t.PDV_Destino)}</td>
+      <td>${esc(t.Fecha_Despacho)}</td>
+      <td>${esc(t.Fecha_Recepcion)}</td>
+      <td><span class="badge ${String(t.Estado_Traslado).toUpperCase() === 'CONFIRMADO' ? 'disponible' : 'rojo'}">${esc(t.Estado_Traslado)}</span></td>
+    </tr>`).join('');
+}
+
+/* ======================================================================
+ *  8. VENTAS
+ * ==================================================================== */
+$('#btnFiltrarVentas').addEventListener('click', () => cargarVentas());
+
+async function cargarVentas() {
+  const tb = $('#tbodyVentas');
+  filaVacia(tb, 11, 'Cargando...');
+  const filtro = {
+    mes: $('#fVenMes').value,
+    semana: $('#fVenSemana').value,
+    pdv: $('#fVenPdv').value,
+    marca: $('#fVenMarca').value,
+    texto: $('#fVenTexto').value,
+    limite: 800
+  };
+  const filas = await api('obtenerVentas', App.token, filtro);
+  App.cache.ventas = filas;
+  $('#venCount').textContent = filas.length + ' ventas';
+  if (!filas.length) { filaVacia(tb, 11, 'Sin ventas para el filtro aplicado.'); return; }
+
+  tb.innerHTML = filas.map(v => `
+    <tr>
+      <td>${esc(v.ID_Venta)}</td>
+      <td>${esc(v.Fecha_Venta)}</td>
+      <td>${esc(v.Mes_Venta)}</td>
+      <td>${esc(v.Semana_Mes)}</td>
+      <td><strong>${esc(v.Chasis_VIN)}</strong></td>
+      <td><span class="badge ${claseMarca(v.Marca)}">${esc(v.Marca)}</span></td>
+      <td>${esc(v.Linea_Modelo)}</td>
+      <td>${esc(v.PDV_Venta)}</td>
+      <td>${esc(v.Asesor_Vendedor)}</td>
+      <td>${esc(v.Tipo_Venta)}</td>
+      <td class="num">${esc(v.Dias_Totales_Sala)}</td>
+    </tr>`).join('');
+}
+
+/* ======================================================================
+ *  9. INGRESO DE UNIDADES
+ * ==================================================================== */
+$('#btnNuevaUnidad').addEventListener('click', () => {
+  const marcas = App.catalogos.marcas;
+  const pdvs = App.catalogos.pdvs.map(p => p.nombre);
+  const hoy = new Date().toISOString().slice(0, 10);
+
+  const back = abrirModal('Ingresar unidad al inventario', 'La unidad queda en estado Disponible.', `
+    <div class="field"><label>Chasis (VIN) *</label><input id="muVin" placeholder="MD625..."></div>
+    <div class="field"><label>Motor</label><input id="muMotor"></div>
+    <div class="field"><label>Marca *</label>
+      <select id="muMarca">${marcas.map(m => `<option>${esc(m)}</option>`).join('')}</select></div>
+    <div class="field"><label>Línea / Modelo *</label><select id="muLinea"></select></div>
+    <div class="field"><label>Modelo año *</label>
+      <input id="muAno" type="number" value="${new Date().getFullYear()}" min="2000"></div>
+    <div class="field"><label>Color</label><input id="muColor"></div>
+    <div class="field"><label>PDV *</label>
+      <select id="muPdv" ${App.perfil.esGlobal ? '' : 'disabled'}>
+        ${pdvs.map(p => `<option>${esc(p)}</option>`).join('')}</select></div>
+    <div class="field"><label>Fecha de ingreso</label><input id="muFecha" type="date" value="${hoy}"></div>
+    <div class="field full"><label>Observación</label><textarea id="muObs"></textarea></div>
+  `, '<button class="btn" id="muGuardar">Ingresar unidad</button>');
+
+  const pintarLineas = () => {
+    const lineas = App.catalogos.lineas[$('#muMarca').value] || [];
+    $('#muLinea').innerHTML = lineas.map(l => `<option>${esc(l)}</option>`).join('');
+  };
+  $('#muMarca', back).addEventListener('change', pintarLineas);
+  pintarLineas();
+
+  $('#muGuardar', back).addEventListener('click', async (e) => {
+    try {
+      await conCarga(e.target, async () => {
+        await api('ingresarUnidad', App.token, {
+          vin: $('#muVin').value, motor: $('#muMotor').value, marca: $('#muMarca').value,
+          linea: $('#muLinea').value, modeloAno: $('#muAno').value, color: $('#muColor').value,
+          pdv: $('#muPdv').value, fechaIngreso: $('#muFecha').value, observacion: $('#muObs').value
+        });
+        cerrarModal();
+        toast('Unidad ingresada', 'Ya está disponible en el inventario.', 'ok');
+        await cargarInventario();
+      });
+    } catch (err) { toast('No se pudo ingresar', err.message, 'err'); }
+  });
+});
+
+/* ======================================================================
+ *  10. USUARIOS (ADMIN)
+ * ==================================================================== */
+async function cargarUsuarios() {
+  const tb = $('#tbodyUsuarios');
+  filaVacia(tb, 7, 'Cargando...');
+  const filas = await api('listarUsuarios', App.token);
+  if (!filas.length) { filaVacia(tb, 7, 'No hay usuarios registrados.'); return; }
+  tb.innerHTML = filas.map(u => {
+    const activo = String(u.Estado_Cuenta).toUpperCase() === 'ACTIVO';
+    return `<tr>
+      <td>${esc(u.ID_Usuario)}</td>
+      <td><strong>${esc(u.Usuario)}</strong></td>
+      <td><span class="badge neutro">${esc(u.Rol)}</span></td>
+      <td>${esc(u.PDV_Asignado)}</td>
+      <td>${esc(u.Marca_Permitida)}</td>
+      <td><span class="badge ${activo ? 'disponible' : 'rojo'}">${esc(u.Estado_Cuenta)}</span></td>
+      <td style="white-space:nowrap">
+        <button class="btn sm ghost" data-reset-user="${esc(u.Usuario)}">Clave</button>
+        <button class="btn sm ${activo ? 'danger' : 'ok'}"
+                data-estado-user="${esc(u.Usuario)}" data-nuevo="${activo ? 'Inactivo' : 'Activo'}">
+          ${activo ? 'Desactivar' : 'Activar'}</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+$('#btnNuevoUsuario').addEventListener('click', () => {
+  const pdvs = (App.perfil.catalogoPdv || []).map(p => p.nombre);
+  const back = abrirModal('Crear usuario', 'La contraseña se almacena solo como hash SHA-256.', `
+    <div class="field"><label>Usuario *</label><input id="cuUsuario" placeholder="nombre.apellido"></div>
+    <div class="field"><label>Contraseña * (mín. 8)</label><input id="cuPass" type="password"></div>
+    <div class="field"><label>Rol *</label><select id="cuRol">
+      <option>ASESOR_PDV</option><option>AUXILIAR</option><option>ADMIN</option></select></div>
+    <div class="field"><label>Marca permitida *</label><select id="cuMarca">
+      <option>TVS</option><option>MOBILITY</option><option>TODAS</option></select></div>
+    <div class="field full"><label>PDV asignado *</label><select id="cuPdv">
+      ${pdvs.map(p => `<option>${esc(p)}</option>`).join('')}</select></div>
+  `, '<button class="btn" id="cuGuardar">Crear</button>');
+
+  $('#cuGuardar', back).addEventListener('click', async (e) => {
+    try {
+      await conCarga(e.target, async () => {
+        await api('crearUsuario', App.token, {
+          usuario: $('#cuUsuario').value, password: $('#cuPass').value,
+          rol: $('#cuRol').value, marca: $('#cuMarca').value, pdv: $('#cuPdv').value
+        });
+        cerrarModal();
+        toast('Usuario creado', 'Ya puede iniciar sesión.', 'ok');
+        await cargarUsuarios();
+      });
+    } catch (err) { toast('No se pudo crear', err.message, 'err'); }
+  });
+});
+
+async function toggleUsuario(usuario, nuevo) {
+  try {
+    await api('cambiarEstadoUsuario', App.token, usuario, nuevo);
+    toast('Cuenta actualizada', usuario + ' → ' + nuevo, 'ok');
+    await cargarUsuarios();
+  } catch (e) { toast('No se pudo actualizar', e.message, 'err'); }
+}
+
+function modalResetPassword(usuario) {
+  const back = abrirModal('Restablecer contraseña', 'Usuario: ' + usuario, `
+    <div class="field full"><label>Nueva contraseña (mín. 8)</label>
+      <input id="rpPass" type="password"></div>
+  `, '<button class="btn" id="rpGuardar">Restablecer</button>');
+
+  $('#rpGuardar', back).addEventListener('click', async (e) => {
+    try {
+      await conCarga(e.target, async () => {
+        await api('restablecerPassword', App.token, usuario, $('#rpPass').value);
+        cerrarModal();
+        toast('Contraseña restablecida', usuario, 'ok');
+      });
+    } catch (err) { toast('No se pudo restablecer', err.message, 'err'); }
+  });
+}
+
+/* Cambio de contraseña propio */
+$('#btnPassword').addEventListener('click', () => {
+  const back = abrirModal('Cambiar mi contraseña', 'Se solicita la contraseña actual por seguridad.', `
+    <div class="field full"><label>Contraseña actual</label><input id="cpActual" type="password"></div>
+    <div class="field full"><label>Nueva contraseña (mín. 8)</label><input id="cpNueva" type="password"></div>
+  `, '<button class="btn" id="cpGuardar">Actualizar</button>');
+
+  $('#cpGuardar', back).addEventListener('click', async (e) => {
+    try {
+      await conCarga(e.target, async () => {
+        await api('cambiarMiPassword', App.token, $('#cpActual').value, $('#cpNueva').value);
+        cerrarModal();
+        toast('Contraseña actualizada', 'Use la nueva clave en su próximo ingreso.', 'ok');
+      });
+    } catch (err) { toast('No se pudo cambiar', err.message, 'err'); }
+  });
+});
+</script>

@@ -1,0 +1,204 @@
+<!--
+  ==========================================================================
+   NECHIMOTOS CRM · ReportesJs.html
+   Renderizado del módulo ejecutivo (ADMIN / AUXILIAR):
+     · KPIs consolidados
+     · Gráficos de barras dibujados con CSS puro (sin librerías externas,
+       coherente con el requisito de costo $0 y carga ligera en móvil)
+     · Matriz PDV × Semana, alertas operativas y consulta de auditoría
+  ==========================================================================
+-->
+<script>
+const Reportes = (function () {
+
+  /**
+   * Dibuja un gráfico de barras horizontal dentro de un contenedor.
+   * @param {string} sel      Selector del contenedor.
+   * @param {Array}  datos    [{ clave, total }]
+   * @param {Object} opciones { azul: boolean, max: number, vacio: string }
+   */
+  function barras(sel, datos, opciones) {
+    const cont = $(sel);
+    if (!cont) return;
+    opciones = opciones || {};
+    if (!datos || !datos.length) {
+      cont.innerHTML = '<p class="empty">' + esc(opciones.vacio || 'Sin datos para el filtro.') + '</p>';
+      return;
+    }
+    const max = opciones.max || Math.max.apply(null, datos.map(d => d.total)) || 1;
+    cont.innerHTML = datos.map(d => {
+      const pct = Math.round((d.total / max) * 100);
+      return `<div class="bar-row">
+        <span class="bar-label" title="${esc(d.clave)}">${esc(d.clave)}</span>
+        <span class="bar-track"><span class="bar-fill ${opciones.azul ? 'azul' : ''}" style="width:${pct}%"></span></span>
+        <span class="bar-value">${esc(d.total)}</span>
+      </div>`;
+    }).join('');
+  }
+
+  /** Lee los filtros del formulario de reportes. */
+  function filtros() {
+    return {
+      ano: $('#fRepAno').value,
+      mes: $('#fRepMes').value,
+      semana: $('#fRepSemana').value,
+      pdv: $('#fRepPdv').value,
+      marca: $('#fRepMarca').value
+    };
+  }
+
+  /** Genera el reporte ejecutivo completo. */
+  async function generar() {
+    if (!App.perfil || !App.perfil.esGlobal) return;
+    const f = filtros();
+    const [rep, matriz, alertas] = await Promise.all([
+      api('obtenerReporteEjecutivo', App.token, f),
+      api('obtenerMatrizPdvSemana', App.token, f.mes),
+      api('obtenerAlertas', App.token)
+    ]);
+
+    // Años disponibles (se llena una sola vez con lo que exista en Ventas).
+    const selAno = $('#fRepAno');
+    if (selAno.options.length <= 1 && rep.aniosDisponibles.length) {
+      selAno.innerHTML = '<option value="">Todos</option>' +
+        rep.aniosDisponibles.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join('');
+      selAno.value = f.ano || '';
+    }
+
+    const k = rep.kpis;
+    $('#repKpis').innerHTML = [
+      kpi('Ventas del periodo', k.totalVentas, 'Según filtros aplicados', 'ok'),
+      kpi('Promedio días en sala', k.promedioDiasSala, 'Rotación comercial', 'info'),
+      kpi('Stock activo', k.stockActivo, k.stockEnvejecido + ' con +60 días', ''),
+      kpi('Índice de rotación', k.rotacion + '%', 'Ventas / stock activo', 'warn')
+    ].join('');
+
+    barras('#chartMes', rep.series.porMes);
+    barras('#chartSemana', rep.series.porSemana, { azul: true });
+    barras('#chartPdv', rep.series.porPdv);
+    barras('#chartMarca', rep.series.porMarca, { azul: true });
+    barras('#chartLinea', rep.series.porLinea);
+    barras('#chartAsesor', rep.series.porAsesor, { azul: true });
+
+    pintarMatriz(matriz);
+    pintarAlertas(alertas);
+  }
+
+  /** Tabla cruzada PDV × Semana con fila de totales. */
+  function pintarMatriz(m) {
+    $('#matrizMes').textContent = 'Periodo: ' + m.mes;
+    const tb = $('#tbodyMatriz');
+    if (!m.filas.length) { filaVacia(tb, 7, 'Sin ventas registradas en el periodo.'); return; }
+    const fila = r => `<tr>
+      <td><strong>${esc(r.pdv)}</strong></td>
+      ${m.semanas.map(s => `<td class="num">${esc(r[s])}</td>`).join('')}
+      <td class="num"><strong>${esc(r.total)}</strong></td>
+    </tr>`;
+    tb.innerHTML = m.filas.map(fila).join('') +
+      `<tr style="background:var(--surface-2)">
+        <td><strong>${esc(m.totales.pdv)}</strong></td>
+        ${m.semanas.map(s => `<td class="num"><strong>${esc(m.totales[s])}</strong></td>`).join('')}
+        <td class="num"><strong>${esc(m.totales.total)}</strong></td>
+      </tr>`;
+  }
+
+  /** Alertas operativas de la coordinación comercial. */
+  function pintarAlertas(a) {
+    const t1 = $('#tbodyAlertaTraslados');
+    if (!a.trasladosVencidos.length) filaVacia(t1, 4, 'Sin traslados vencidos. ✔');
+    else t1.innerHTML = a.trasladosVencidos.map(t => `
+      <tr>
+        <td>${esc(t.ID_Traslado)}</td>
+        <td><strong>${esc(t.Chasis_VIN)}</strong></td>
+        <td>${esc(t.PDV_Origen)} → ${esc(t.PDV_Destino)}</td>
+        <td class="num"><span class="badge rojo">${esc(t.dias)}</span></td>
+      </tr>`).join('');
+
+    const t2 = $('#tbodyAlertaStock');
+    if (!a.unidadesEnvejecidas.length) filaVacia(t2, 4, 'Sin unidades con más de 90 días. ✔');
+    else t2.innerHTML = a.unidadesEnvejecidas.map(u => `
+      <tr>
+        <td><strong>${esc(u.Chasis_VIN)}</strong></td>
+        <td>${esc(u.Linea_Modelo)}</td>
+        <td>${esc(u.PDV_Actual)}</td>
+        <td class="num"><span class="badge ${u.dias > 120 ? 'rojo' : 'traslado'}">${esc(u.dias)}</span></td>
+      </tr>`).join('');
+
+    const chips = $('#chipsPdvSinVentas');
+    chips.innerHTML = a.pdvSinVentas.length
+      ? a.pdvSinVentas.map(p => `<span class="chip">${esc(p)}</span>`).join('')
+      : '<span class="muted">Todos los puntos registran ventas este mes. ✔</span>';
+  }
+
+  /* -------------------------------------------------------------------
+   *  AUDITORÍA
+   * ----------------------------------------------------------------- */
+  async function cargarAuditoria() {
+    const tb = $('#tbodyAuditoria');
+    filaVacia(tb, 7, 'Cargando...');
+    const filas = await api('consultarAuditoria', App.token, {
+      usuario: $('#fAudUsuario').value,
+      accion: $('#fAudAccion').value,
+      desde: $('#fAudDesde').value,
+      hasta: $('#fAudHasta').value,
+      limite: 300
+    });
+    if (!filas.length) { filaVacia(tb, 7, 'Sin registros para el filtro.'); return; }
+    tb.innerHTML = filas.map(r => `
+      <tr>
+        <td style="white-space:nowrap">${esc(r.Timestamp)}</td>
+        <td><strong>${esc(r.Usuario)}</strong></td>
+        <td><span class="badge neutro">${esc(r.Rol)}</span></td>
+        <td>${esc(r.PDV)}</td>
+        <td><span class="badge ${claseAccion(r.Accion_Realizada)}">${esc(r.Accion_Realizada)}</span></td>
+        <td>${esc(r.Chasis_Afectado)}</td>
+        <td class="muted">${esc(r.Detalle)}</td>
+      </tr>`).join('');
+  }
+
+  /** Color del badge según el tipo de acción auditada. */
+  function claseAccion(accion) {
+    const a = String(accion || '').toUpperCase();
+    if (a.indexOf('DENEGADO') !== -1 || a.indexOf('FALLIDO') !== -1 || a.indexOf('BLOQUEADO') !== -1) return 'rojo';
+    if (a.indexOf('VENTA') !== -1) return 'disponible';
+    if (a.indexOf('TRASLADO') !== -1) return 'traslado';
+    if (a.indexOf('LOGIN') !== -1 || a.indexOf('LOGOUT') !== -1) return 'consignacion';
+    return 'neutro';
+  }
+
+  /* -------------------------------------------------------------------
+   *  EXPORTACIÓN CSV (descarga generada en el navegador, sin Drive)
+   * ----------------------------------------------------------------- */
+  async function exportarVentas() {
+    const csv = await api('exportarVentasCsv', App.token, {
+      mes: $('#fVenMes').value, semana: $('#fVenSemana').value,
+      pdv: $('#fVenPdv').value, marca: $('#fVenMarca').value, texto: $('#fVenTexto').value
+    });
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Ventas_Nechimotos_' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  return { generar, cargarAuditoria, exportarVentas, barras };
+})();
+
+/* --------------------------- Enlaces de UI ---------------------------- */
+$('#btnGenerarReporte').addEventListener('click', async (e) => {
+  try { await conCarga(e.target, () => Reportes.generar()); }
+  catch (err) { toast('No se pudo generar el reporte', err.message, 'err'); }
+});
+
+$('#btnFiltrarAud').addEventListener('click', async (e) => {
+  try { await conCarga(e.target, () => Reportes.cargarAuditoria()); }
+  catch (err) { toast('No se pudo consultar', err.message, 'err'); }
+});
+
+$('#btnExportarVentas').addEventListener('click', async (e) => {
+  try { await conCarga(e.target, () => Reportes.exportarVentas()); }
+  catch (err) { toast('No se pudo exportar', err.message, 'err'); }
+});
+</script>

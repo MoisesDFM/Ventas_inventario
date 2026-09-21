@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+  <title>Nechimotos · CRM de Inventarios y Ventas</title>
+  <!-- Hoja de estilos CSS3 nativa (sin Bootstrap) -->
+  <?!= include('StyleCss'); ?>
+</head>
+
+<body data-theme="light">
+
+<!-- ==================================================================== -->
+<!-- VISTA 1 · LOGIN                                                       -->
+<!-- ==================================================================== -->
+<section id="loginView" class="login-wrap">
+  <form class="login-card" id="loginForm" autocomplete="on">
+    <div class="brand-mark">
+      <div class="brand-logo">N</div>
+      <div>
+        <div class="brand-name">Nechimotos</div>
+        <div class="brand-sub">CRM · Inventarios y Ventas · 27 PDV</div>
+      </div>
+    </div>
+
+    <div class="field" style="margin-bottom:12px">
+      <label for="inpUsuario">Usuario</label>
+      <input id="inpUsuario" name="username" type="text" autocomplete="username"
+             placeholder="nombre.apellido" required>
+    </div>
+    <div class="field" style="margin-bottom:18px">
+      <label for="inpPassword">Contraseña</label>
+      <input id="inpPassword" name="password" type="password" autocomplete="current-password"
+             placeholder="••••••••" required>
+    </div>
+
+    <button class="btn block" id="btnLogin" type="submit">Ingresar</button>
+    <p class="muted" id="loginMsg" style="margin:14px 0 0;text-align:center"></p>
+    <p class="muted" style="margin:16px 0 0;text-align:center;font-size:11.5px">
+      Acceso controlado y auditado. Toda operación queda registrada.
+    </p>
+  </form>
+</section>
+
+<!-- ==================================================================== -->
+<!-- VISTA 2 · APLICACIÓN                                                  -->
+<!-- ==================================================================== -->
+<div id="appView" class="app" hidden>
+
+  <!-- ------------------------- NAVEGACIÓN LATERAL -------------------- -->
+  <aside class="sidebar" id="sidebar">
+    <div class="side-head">
+      <div class="brand-logo" style="width:38px;height:38px;font-size:16px">N</div>
+      <div>
+        <div class="brand-name" style="font-size:15.5px">Nechimotos</div>
+        <div class="brand-sub" id="sideCtx">—</div>
+      </div>
+    </div>
+
+    <button class="nav-btn active" data-view="dashboard"><span class="ico">▦</span> Dashboard</button>
+    <button class="nav-btn" data-view="inventario"><span class="ico">▤</span> Inventario</button>
+    <button class="nav-btn" data-view="traslados">
+      <span class="ico">⇄</span> Traslados <span class="nav-badge" id="badgeTraslados" hidden>0</span>
+    </button>
+    <button class="nav-btn" data-view="ventas"><span class="ico">✓</span> Ventas</button>
+    <button class="nav-btn admin-only" data-view="reportes" hidden><span class="ico">◴</span> Reportes</button>
+    <button class="nav-btn admin-only" data-view="auditoria" hidden><span class="ico">☰</span> Auditoría</button>
+    <button class="nav-btn admin-only" data-view="usuarios" hidden><span class="ico">♟</span> Usuarios</button>
+
+    <div class="side-foot">
+      <div class="muted" style="padding:0 6px 8px">
+        <strong id="sideUsuario" style="color:var(--text)">—</strong><br>
+        <span id="sideRol">—</span>
+      </div>
+      <button class="nav-btn" id="btnPassword"><span class="ico">⚿</span> Cambiar contraseña</button>
+      <button class="nav-btn" id="btnLogout"><span class="ico">⏻</span> Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <!-- ------------------------------ PRINCIPAL ------------------------- -->
+  <main class="main">
+    <header class="topbar">
+      <button class="icon-btn menu-toggle" id="btnMenu" aria-label="Abrir menú">☰</button>
+      <h1 id="viewTitle">Dashboard</h1>
+      <span class="spacer"></span>
+      <span class="badge neutro" id="chipPdv">—</span>
+      <button class="icon-btn" id="btnTema" title="Cambiar tema">◐</button>
+      <button class="icon-btn" id="btnRefrescar" title="Actualizar datos">⟳</button>
+    </header>
+
+    <div class="content">
+
+      <!-- ============ DASHBOARD ============ -->
+      <section class="view" id="view-dashboard">
+        <div class="kpi-grid" id="kpiGrid"></div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head"><h3>Traslados pendientes de confirmar</h3></div>
+            <div class="table-wrap"><table>
+              <thead><tr><th>Chasis</th><th>Origen</th><th>Días</th><th></th></tr></thead>
+              <tbody id="tbodyDashTraslados"></tbody>
+            </table></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Mayor permanencia en sala</h3></div>
+            <div class="table-wrap"><table>
+              <thead><tr><th>Chasis</th><th>Línea</th><th class="num">Días</th></tr></thead>
+              <tbody id="tbodyDashAntiguos"></tbody>
+            </table></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ INVENTARIO ============ -->
+      <section class="view" id="view-inventario" hidden>
+        <div class="card">
+          <div class="card-head">
+            <h3>Stock activo</h3><span class="spacer"></span>
+            <button class="btn sm" id="btnNuevaUnidad">＋ Ingresar unidad</button>
+          </div>
+          <div class="toolbar">
+            <div class="field"><label>Buscar (chasis, motor, línea)</label>
+              <input id="fInvTexto" type="search" placeholder="Ej: MD625..."></div>
+            <div class="field"><label>PDV</label><select id="fInvPdv"></select></div>
+            <div class="field"><label>Marca</label><select id="fInvMarca"></select></div>
+            <div class="field"><label>Estado</label><select id="fInvEstado"></select></div>
+            <button class="btn ghost" id="btnFiltrarInv">Filtrar</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h3 id="invCount">0 unidades</h3><span class="spacer"></span>
+            <span class="muted">Ordenado por días en sala (mayor a menor)</span>
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr>
+              <th>Chasis (VIN)</th><th>Marca</th><th>Línea / Modelo</th><th>Color</th>
+              <th>PDV actual</th><th>Estado</th><th class="num">Días sala</th><th>Acciones</th>
+            </tr></thead>
+            <tbody id="tbodyInventario"></tbody>
+          </table></div>
+        </div>
+      </section>
+
+      <!-- ============ TRASLADOS ============ -->
+      <section class="view" id="view-traslados" hidden>
+        <div class="card">
+          <div class="card-head">
+            <h3>Pendientes de confirmar recepción</h3><span class="spacer"></span>
+            <span class="muted">Paso 2 del protocolo</span>
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr>
+              <th>ID</th><th>Chasis</th><th>Origen</th><th>Destino</th>
+              <th>Despachó</th><th>Fecha despacho</th><th class="num">Días</th><th>Acción</th>
+            </tr></thead>
+            <tbody id="tbodyEntrantes"></tbody>
+          </table></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>Despachados desde mi punto (en tránsito)</h3></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>ID</th><th>Chasis</th><th>Destino</th><th>Fecha despacho</th><th class="num">Días</th><th>Acción</th></tr></thead>
+            <tbody id="tbodySalientes"></tbody>
+          </table></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>Histórico de traslados</h3></div>
+          <div class="table-wrap"><table>
+            <thead><tr>
+              <th>ID</th><th>Chasis</th><th>Origen</th><th>Destino</th>
+              <th>Despacho</th><th>Recepción</th><th>Estado</th>
+            </tr></thead>
+            <tbody id="tbodyHistTraslados"></tbody>
+          </table></div>
+        </div>
+      </section>
+
+      <!-- ============ VENTAS ============ -->
+      <section class="view" id="view-ventas" hidden>
+        <div class="card">
+          <div class="card-head"><h3>Histórico de facturación</h3><span class="spacer"></span>
+            <button class="btn ghost sm admin-only" id="btnExportarVentas" hidden>⬇ Exportar CSV</button>
+          </div>
+          <div class="toolbar">
+            <div class="field"><label>Mes (YYYY-MM)</label><input id="fVenMes" type="month"></div>
+            <div class="field"><label>Semana</label><select id="fVenSemana">
+              <option value="">Todas</option><option>Semana 1</option><option>Semana 2</option>
+              <option>Semana 3</option><option>Semana 4</option><option>Semana 5</option>
+            </select></div>
+            <div class="field"><label>PDV</label><select id="fVenPdv"></select></div>
+            <div class="field"><label>Marca</label><select id="fVenMarca"></select></div>
+            <div class="field"><label>Buscar</label><input id="fVenTexto" type="search" placeholder="Chasis, asesor..."></div>
+            <button class="btn ghost" id="btnFiltrarVentas">Filtrar</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3 id="venCount">0 ventas</h3></div>
+          <div class="table-wrap"><table>
+            <thead><tr>
+              <th>ID venta</th><th>Fecha</th><th>Mes</th><th>Semana</th><th>Chasis</th>
+              <th>Marca</th><th>Línea</th><th>PDV</th><th>Asesor</th><th>Tipo</th><th class="num">Días sala</th>
+            </tr></thead>
+            <tbody id="tbodyVentas"></tbody>
+          </table></div>
+        </div>
+      </section>
+
+      <!-- ============ REPORTES (ADMIN / AUXILIAR) ============ -->
+      <section class="view" id="view-reportes" hidden>
+        <div class="card">
+          <div class="card-head"><h3>Filtros del reporte ejecutivo</h3></div>
+          <div class="toolbar">
+            <div class="field"><label>Año</label><select id="fRepAno"><option value="">Todos</option></select></div>
+            <div class="field"><label>Mes</label><input id="fRepMes" type="month"></div>
+            <div class="field"><label>Semana</label><select id="fRepSemana">
+              <option value="">Todas</option><option>Semana 1</option><option>Semana 2</option>
+              <option>Semana 3</option><option>Semana 4</option><option>Semana 5</option>
+            </select></div>
+            <div class="field"><label>PDV</label><select id="fRepPdv"></select></div>
+            <div class="field"><label>Marca</label><select id="fRepMarca"></select></div>
+            <button class="btn" id="btnGenerarReporte">Generar</button>
+          </div>
+        </div>
+
+        <div class="kpi-grid" id="repKpis"></div>
+
+        <div class="grid-2">
+          <div class="card"><div class="card-head"><h3>Ventas por mes</h3></div><div class="bars" id="chartMes"></div></div>
+          <div class="card"><div class="card-head"><h3>Ventas por semana del mes</h3></div><div class="bars" id="chartSemana"></div></div>
+          <div class="card"><div class="card-head"><h3>Ranking de puntos de venta</h3></div><div class="bars" id="chartPdv"></div></div>
+          <div class="card"><div class="card-head"><h3>Participación por marca</h3></div><div class="bars" id="chartMarca"></div></div>
+          <div class="card"><div class="card-head"><h3>Top líneas vendidas</h3></div><div class="bars" id="chartLinea"></div></div>
+          <div class="card"><div class="card-head"><h3>Top asesores</h3></div><div class="bars" id="chartAsesor"></div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>Matriz PDV × Semana</h3><span class="spacer"></span>
+            <span class="muted" id="matrizMes">—</span></div>
+          <div class="table-wrap"><table id="tablaMatriz">
+            <thead><tr><th>PDV</th><th class="num">S1</th><th class="num">S2</th><th class="num">S3</th>
+              <th class="num">S4</th><th class="num">S5</th><th class="num">Total</th></tr></thead>
+            <tbody id="tbodyMatriz"></tbody>
+          </table></div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head"><h3>Traslados sin confirmar (+3 días)</h3></div>
+            <div class="table-wrap"><table>
+              <thead><tr><th>ID</th><th>Chasis</th><th>Origen → Destino</th><th class="num">Días</th></tr></thead>
+              <tbody id="tbodyAlertaTraslados"></tbody>
+            </table></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Inventario con +90 días</h3></div>
+            <div class="table-wrap"><table>
+              <thead><tr><th>Chasis</th><th>Línea</th><th>PDV</th><th class="num">Días</th></tr></thead>
+              <tbody id="tbodyAlertaStock"></tbody>
+            </table></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Puntos sin ventas este mes</h3></div>
+            <div class="chip-row" id="chipsPdvSinVentas"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ AUDITORÍA (ADMIN / AUXILIAR) ============ -->
+      <section class="view" id="view-auditoria" hidden>
+        <div class="card">
+          <div class="card-head"><h3>Bitácora de trazabilidad</h3></div>
+          <div class="toolbar">
+            <div class="field"><label>Usuario</label><input id="fAudUsuario" type="search" placeholder="Usuario"></div>
+            <div class="field"><label>Acción</label><input id="fAudAccion" type="search" placeholder="VENTA, LOGIN..."></div>
+            <div class="field"><label>Desde</label><input id="fAudDesde" type="date"></div>
+            <div class="field"><label>Hasta</label><input id="fAudHasta" type="date"></div>
+            <button class="btn ghost" id="btnFiltrarAud">Consultar</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="table-wrap"><table>
+            <thead><tr><th>Timestamp</th><th>Usuario</th><th>Rol</th><th>PDV</th>
+              <th>Acción</th><th>Chasis</th><th>Detalle</th></tr></thead>
+            <tbody id="tbodyAuditoria"></tbody>
+          </table></div>
+        </div>
+      </section>
+
+      <!-- ============ USUARIOS (ADMIN) ============ -->
+      <section class="view" id="view-usuarios" hidden>
+        <div class="card">
+          <div class="card-head"><h3>Cuentas del sistema</h3><span class="spacer"></span>
+            <button class="btn sm" id="btnNuevoUsuario">＋ Crear usuario</button></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>ID</th><th>Usuario</th><th>Rol</th><th>PDV asignado</th>
+              <th>Marca</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody id="tbodyUsuarios"></tbody>
+          </table></div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<!-- Contenedor de modales y notificaciones -->
+<div id="modalHost"></div>
+<div class="toasts" id="toasts"></div>
+
+<!-- Controladores cliente -->
+<?!= include('AppJs'); ?>
+<?!= include('ReportesJs'); ?>
+</body>
+</html>
