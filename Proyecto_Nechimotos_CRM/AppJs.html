@@ -410,25 +410,55 @@ async function modalDespacho(vin) {
   try { info = await api('obtenerDestinosValidos', App.token, vin); }
   catch (e) { return toast('No se pudo preparar el traslado', e.message, 'err'); }
 
-  const opciones = info.destinos.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
+  const opcion = d => `<option value="${esc(d)}">${esc(d)}</option>`;
+  const excepciones = info.destinosExcepcion || [];
+  // Los puntos que no manejan la marca van en un grupo aparte y solo se
+  // ofrecen a la jefatura; el servidor vuelve a validarlo al despachar.
+  const opciones = info.destinos.map(opcion).join('') + (excepciones.length
+    ? `<optgroup label="⚠ No manejan ${esc(info.marca)} — requiere autorización">
+         ${excepciones.map(opcion).join('')}</optgroup>`
+    : '');
+
   const back = abrirModal('Despachar traslado (Paso 1)',
-    'Solo se listan puntos homologados para la marca ' + info.marca + '.', `
+    info.puedeAutorizarExcepcion
+      ? 'Puntos homologados para ' + info.marca + '. Como jefatura puede autorizar una excepción justificándola.'
+      : 'Solo se listan puntos homologados para la marca ' + info.marca + '.', `
     <div class="field full"><label>Chasis</label><input value="${esc(vin)}" disabled></div>
     <div class="field"><label>PDV origen</label><input value="${esc(info.origen)}" disabled></div>
     <div class="field"><label>PDV destino *</label><select id="mtDestino">${opciones}</select></div>
+    <div class="field full" id="mtBloqueExcepcion" hidden>
+      <label style="color:var(--warn)">⚠ Motivo de la autorización excepcional *</label>
+      <textarea id="mtMotivo" placeholder="Ese punto no maneja la marca. Explique por qué se autoriza el traslado."></textarea>
+      <span class="muted">Quedará en la observación del traslado y en la auditoría, con su usuario.</span>
+    </div>
     <div class="field full"><label>Observación</label>
       <textarea id="mtObs" placeholder="Transportadora, guía, responsable..."></textarea></div>
   `, '<button class="btn warnb" id="mtConfirmar">Despachar</button>');
+
+  // Muestra el campo de motivo solo cuando el destino elegido es excepcional.
+  const sincronizarExcepcion = () => {
+    const esExcepcion = excepciones.indexOf($('#mtDestino').value) !== -1;
+    $('#mtBloqueExcepcion', back).hidden = !esExcepcion;
+    $('#mtConfirmar', back).textContent = esExcepcion ? 'Autorizar y despachar' : 'Despachar';
+  };
+  $('#mtDestino', back).addEventListener('change', sincronizarExcepcion);
+  sincronizarExcepcion();
 
   $('#mtConfirmar', back).addEventListener('click', async (e) => {
     try {
       await conCarga(e.target, async () => {
         const r = await api('despacharTraslado', App.token, {
-          vin: vin, pdvDestino: $('#mtDestino').value, observacion: $('#mtObs').value
+          vin: vin,
+          pdvDestino: $('#mtDestino').value,
+          observacion: $('#mtObs').value,
+          motivoExcepcion: $('#mtMotivo') ? $('#mtMotivo').value : ''
         });
         cerrarModal();
-        toast('Traslado ' + r.ID_Traslado + ' en tránsito',
-              r.PDV_Origen + ' → ' + r.PDV_Destino, 'ok');
+        toast(
+          (r.excepcional ? '⚠ Traslado excepcional ' : 'Traslado ') + r.ID_Traslado + ' en tránsito',
+          r.PDV_Origen + ' → ' + r.PDV_Destino +
+            (r.excepcional ? ' · autorización registrada en auditoría' : ''),
+          r.excepcional ? 'warn' : 'ok');
         await cargarVista(App.vista);
       });
     } catch (err) { toast('No se pudo despachar', err.message, 'err'); }

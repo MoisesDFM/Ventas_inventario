@@ -80,6 +80,39 @@ check('Origen ya no ve la unidad', ok(obtenerInventario(a1.token, {})).filas.len
 check('Traslado no se confirma dos veces',
   confirmarRecepcion(a3.token, desp.ID_Traslado, '').ok === false);
 
+// 6b. Excepción de marca autorizada por la jefatura
+ok(ingresarUnidad(a1.token, { vin: 'MD625GF12N4444444', motor: 'M4', marca: 'TVS',
+  linea: 'Sport 100 ELS', modeloAno: 2026, color: 'Negro' }));
+const destAsesor = ok(obtenerDestinosValidos(a1.token, 'MD625GF12N4444444'));
+check('Asesor no recibe destinos excepcionales',
+  destAsesor.destinosExcepcion.length === 0 && destAsesor.puedeAutorizarExcepcion === false);
+const destAdmin = ok(obtenerDestinosValidos(adm.token, 'MD625GF12N4444444'));
+check('Jefatura sí los recibe, marcados aparte',
+  destAdmin.destinosExcepcion.indexOf('BANCO MOBILITY') !== -1 &&
+  destAdmin.destinos.indexOf('BANCO MOBILITY') === -1);
+check('Asesor sigue bloqueado hacia punto no homologado',
+  despacharTraslado(a1.token, { vin: 'MD625GF12N4444444', pdvDestino: 'BANCO MOBILITY',
+    motivoExcepcion: 'lo intento igual' }).ok === false);
+check('Jefatura sin motivo escrito es rechazada',
+  despacharTraslado(adm.token, { vin: 'MD625GF12N4444444', pdvDestino: 'BANCO MOBILITY' }).ok === false);
+const exc = ok(despacharTraslado(adm.token, { vin: 'MD625GF12N4444444',
+  pdvDestino: 'BANCO MOBILITY', motivoExcepcion: 'Cliente trasladado de ciudad, autoriza jefatura' }));
+check('Jefatura con motivo despacha y queda marcado como excepcional', exc.excepcional === true);
+const trasExc = ok(obtenerTraslados(adm.token, {})).entrantes
+  .filter(t => t.ID_Traslado === exc.ID_Traslado)[0];
+check('Observación deja constancia del autorizante y el motivo',
+  trasExc.Observacion.indexOf('TRASLADO EXCEPCIONAL') === 0 &&
+  trasExc.Observacion.indexOf('admin.nechimotos') !== -1 &&
+  trasExc.Observacion.indexOf('Cliente trasladado de ciudad') !== -1, trasExc.Observacion);
+check('Auditoría distingue la acción excepcional',
+  ok(consultarAuditoria(adm.token, { limite: 500 }))
+    .some(r => r.Accion_Realizada === 'TRASLADO_DESPACHADO_EXCEPCION' &&
+               r.Detalle.indexOf('MARCA NO HOMOLOGADA') !== -1));
+const tokBanco = ok(login('asesor.banco', 'Clave12345')).token;
+check('El destino puede confirmar la recepción excepcional',
+  confirmarRecepcion(tokBanco, exc.ID_Traslado, 'Recibida con autorización').ok === true);
+ok(logout(tokBanco));
+
 // 7. Venta con cálculos automáticos
 const venta = ok(registrarVenta(a3.token, { vin: 'MD625GF12N1111111', tipoVenta: 'Credito', observacion: 'Cliente X' }));
 const hoy = new Date();

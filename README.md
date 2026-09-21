@@ -126,6 +126,15 @@ como `Confirmado`. El selector de `PDV_Destino` solo ofrece puntos homologados p
 marca de la moto. Un traslado en tránsito puede anularse (con motivo) por el origen o
 la jefatura.
 
+**Excepción de marca autorizada** — para el caso puntual en que una moto deba ir a un
+punto que no maneja su marca, `ADMIN` y `AUXILIAR` ven esos destinos en un grupo
+aparte del selector (`⚠ No manejan <marca> — requiere autorización`) y solo pueden
+usarlos escribiendo el motivo. El traslado queda marcado en su observación
+(`TRASLADO EXCEPCIONAL autorizado por <usuario>: <motivo>`) y en `Auditoria` con la
+acción `TRASLADO_DESPACHADO_EXCEPCION`, distinta de un despacho normal para poder
+filtrarla. El `ASESOR_PDV` sigue restringido: ni ve esos destinos ni puede forzarlos
+desde el navegador.
+
 **Concurrencia** — venta, ingreso, despacho y recepción se ejecutan bajo
 `LockService` para que dos asesores no puedan operar el mismo chasis a la vez.
 

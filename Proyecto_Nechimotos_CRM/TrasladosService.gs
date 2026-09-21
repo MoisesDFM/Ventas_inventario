@@ -15,6 +15,12 @@
  *
  *  Restricción de marca: PDV_Destino solo puede ser un punto homologado para
  *  la marca de la motocicleta (CATALOGO_PDV en Config.gs).
+ *
+ *  EXCEPCIÓN AUTORIZADA: ADMIN y AUXILIAR pueden despachar a un punto que no
+ *  maneja esa marca, pero solo escribiendo el motivo. El traslado queda
+ *  marcado como excepcional en la observación y se registra en `Auditoria` con
+ *  la acción TRASLADO_DESPACHADO_EXCEPCION. El ASESOR_PDV sigue restringido a
+ *  los puntos homologados.
  * ============================================================================
  */
 
@@ -25,8 +31,12 @@ function generarIdTraslado_() {
 }
 
 /**
- * Devuelve los PDV de destino válidos para un chasis concreto.
- * Filtra por marca y excluye el punto de origen.
+ * Devuelve los PDV de destino disponibles para un chasis concreto.
+ *
+ *  - `destinos`: puntos homologados para la marca de la moto (la vía normal).
+ *  - `destinosExcepcion`: el resto de la red. Solo se entrega a ADMIN/AUXILIAR
+ *    y solo puede usarse justificando el motivo (ver `despacharTraslado`).
+ *    Para un ASESOR_PDV llega siempre vacío.
  */
 function obtenerDestinosValidos(token, vin) {
   return ejecutarSeguro_(function () {
@@ -37,12 +47,20 @@ function obtenerDestinosValidos(token, vin) {
     exigirAcceso_(ses, reg.datos.PDV_Actual, reg.datos.Marca, 'CONSULTA_DESTINOS', v);
 
     var origen = norm_(reg.datos.PDV_Actual);
+    var noEsOrigen = function (p) { return norm_(p) !== origen; };
+    var homologados = pdvsPorMarca_(reg.datos.Marca).filter(noEsOrigen);
+    var excepcion = esGlobal_(ses)
+      ? CATALOGO_PDV.map(function (p) { return p.nombre; })
+          .filter(noEsOrigen)
+          .filter(function (p) { return homologados.indexOf(p) === -1; })
+      : [];
+
     return {
       marca: reg.datos.Marca,
       origen: reg.datos.PDV_Actual,
-      destinos: pdvsPorMarca_(reg.datos.Marca).filter(function (p) {
-        return norm_(p) !== origen;
-      })
+      destinos: homologados,
+      destinosExcepcion: excepcion,
+      puedeAutorizarExcepcion: esGlobal_(ses)
     };
   });
 }
@@ -74,11 +92,34 @@ function despacharTraslado(token, datos) {
         throw new Error('REGLA_NEGOCIO: la unidad ya tiene un traslado en tránsito.');
       }
 
-      // Validación de destino contra el catálogo homologado por marca.
-      var destinosValidos = pdvsPorMarca_(u.Marca).filter(function (p) {
-        return norm_(p) !== norm_(u.PDV_Actual);
-      });
-      var destino = exigirEnLista_(datos.pdvDestino, destinosValidos, 'PDV_Destino');
+      // Validación de destino. La vía normal es el catálogo homologado por
+      // marca; la jefatura puede salirse de él de forma excepcional.
+      var noEsOrigen = function (p) { return norm_(p) !== norm_(u.PDV_Actual); };
+      var homologados = pdvsPorMarca_(u.Marca).filter(noEsOrigen);
+      var todos = CATALOGO_PDV.map(function (p) { return p.nombre; }).filter(noEsOrigen);
+      var destino = exigirEnLista_(datos.pdvDestino, todos, 'PDV_Destino');
+
+      // EXCEPCIÓN DE MARCA: el destino no está homologado para esta marca.
+      // Solo ADMIN/AUXILIAR, solo con motivo escrito, y queda marcado tanto en
+      // la observación del traslado como en la bitácora de auditoría.
+      var excepcional = homologados.indexOf(destino) === -1;
+      var motivo = '';
+      if (excepcional) {
+        if (!esGlobal_(ses)) {
+          registrarAuditoria_(ses, 'ACCESO_DENEGADO', vin,
+            'Intento de traslado a punto no homologado: ' + destino + ' (marca ' + u.Marca + ')');
+          throw new Error('PERMISO_DENEGADO: ' + destino + ' no maneja la marca ' +
+            u.Marca + '. Solicite la autorización a la jefatura comercial.');
+        }
+        motivo = limpiarTexto_(datos.motivoExcepcion, 300);
+        if (!motivo) {
+          throw new Error('DATO_INVALIDO: indique el motivo de la autorización excepcional ' +
+            'para trasladar una ' + u.Marca + ' a ' + destino + '.');
+        }
+        observacion = 'TRASLADO EXCEPCIONAL autorizado por ' + ses.usuario +
+          ' (' + u.Marca + ' hacia punto no homologado): ' + motivo +
+          (observacion ? ' | ' + observacion : '');
+      }
 
       var ahora = new Date();
       var idTraslado = generarIdTraslado_();
@@ -104,17 +145,25 @@ function despacharTraslado(token, datos) {
       resultado = {
         ID_Traslado: idTraslado,
         Chasis_VIN: u.Chasis_VIN,
+        Marca: u.Marca,
         PDV_Origen: u.PDV_Actual,
         PDV_Destino: destino,
         Fecha_Despacho: formatearFechaHora_(ahora),
-        Estado_Traslado: ESTADOS_TRASLADO.TRANSITO
+        Estado_Traslado: ESTADOS_TRASLADO.TRANSITO,
+        excepcional: excepcional,
+        motivoExcepcion: motivo
       };
     } finally {
       lock.releaseLock();
     }
 
-    registrarAuditoria_(ses, 'TRASLADO_DESPACHADO', vin,
-      'ID=' + resultado.ID_Traslado + ' ' + resultado.PDV_Origen + ' -> ' + resultado.PDV_Destino);
+    registrarAuditoria_(ses,
+      resultado.excepcional ? 'TRASLADO_DESPACHADO_EXCEPCION' : 'TRASLADO_DESPACHADO',
+      vin,
+      'ID=' + resultado.ID_Traslado + ' ' + resultado.PDV_Origen + ' -> ' + resultado.PDV_Destino +
+      (resultado.excepcional
+        ? ' | MARCA NO HOMOLOGADA EN DESTINO (' + resultado.Marca + ') | Motivo: ' + resultado.motivoExcepcion
+        : ''));
     return resultado;
   });
 }
