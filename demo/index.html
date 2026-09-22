@@ -5,6 +5,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
   <title>DEMO · Nechimotos · CRM de Inventarios y Ventas</title>
+  <!-- Ícono incrustado. En la Web App la pestaña la controla setFaviconUrl
+       (Auth.gs), porque la página se sirve dentro de un iframe; esto cubre la
+       demo local y cualquier apertura directa del archivo. -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='116' fill='%23e11d2a'/%3E%3Cpath d='M150 366V146h54l104 140V146h54v220h-54L204 226v140z' fill='%23fff'/%3E%3C/svg%3E">
   <!-- Hoja de estilos CSS3 nativa (sin Bootstrap) -->
   <!--
   ==========================================================================
@@ -892,6 +896,13 @@ var PROP_SPREADSHEET_ID = 'SPREADSHEET_ID';
 var PROP_PEPPER = 'AUTH_PEPPER';
 
 /**
+ * Propiedad de script con la URL pública del ícono de la pestaña (favicon).
+ * Se configura con `configurarFavicon(url)` (Setup.gs) para no tener que tocar
+ * el código al cambiar el logo.
+ */
+var PROP_FAVICON_URL = 'FAVICON_URL';
+
+/**
  * ID del archivo `BaseDatos_Nechimotos_Master`.
  * Se recomienda NO dejarlo escrito en el código: ejecute `instalarNechimotos()`
  * (Setup.gs) que lo guarda en las Propiedades del Script. Si por alguna razón
@@ -1553,11 +1564,18 @@ function ejecutarSeguro_(fn) {
  * Sirve una única página (SPA) y evalúa las plantillas HTML incluidas.
  */
 function doGet() {
-  var t = HtmlService.createTemplateFromFile('Index');
-  return t.evaluate()
+  var salida = HtmlService.createTemplateFromFile('Index').evaluate()
     .setTitle('Nechimotos · CRM de Inventarios y Ventas')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=5')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+
+  // El ícono de la pestaña debe fijarse aquí: la aplicación se sirve dentro de
+  // un iframe, así que un <link rel="icon"> en el HTML no llega a la pestaña
+  // del navegador. La URL debe ser pública (ver configurarFavicon en Setup.gs).
+  var favicon = PropertiesService.getScriptProperties().getProperty(PROP_FAVICON_URL);
+  if (favicon) salida.setFaviconUrl(favicon);
+
+  return salida;
 }
 
 /** Permite incluir StyleCss.html / AppJs.html / ReportesJs.html dentro de Index. */
@@ -3308,6 +3326,41 @@ function repararMesVenta() {
 
   var informe = 'Mes_Venta reparada: ' + cambiadas + ' de ' + originales.length +
     ' filas corregidas. Ejemplo: ' + corregidos[0][0];
+  Logger.log(informe);
+  return informe;
+}
+
+/**
+ * Fija la URL pública del ícono de la pestaña (favicon) de la Web App.
+ *
+ * Apps Script exige una URL accesible sin iniciar sesión; no acepta archivos
+ * locales ni imágenes incrustadas. La vía más simple es subir el PNG a Drive,
+ * compartirlo como "Cualquier persona con el enlace · Lector" y usar:
+ *
+ *   https://drive.google.com/uc?export=view&id=ID_DEL_ARCHIVO
+ *
+ * Después de ejecutarla hay que publicar una versión nueva para que el cambio
+ * llegue a la aplicación en uso.
+ *
+ * @param {string} url URL pública de la imagen (PNG o ICO). Vacío la quita.
+ * @return {string} Confirmación de lo configurado.
+ */
+function configurarFavicon(url) {
+  var props = PropertiesService.getScriptProperties();
+  var limpia = String(url || '').trim();
+
+  if (!limpia) {
+    props.deleteProperty(PROP_FAVICON_URL);
+    Logger.log('Favicon eliminado: la pestaña volverá al ícono por defecto.');
+    return 'Favicon eliminado.';
+  }
+  if (!/^https:\/\//.test(limpia)) {
+    throw new Error('La URL del favicon debe empezar por https://');
+  }
+
+  props.setProperty(PROP_FAVICON_URL, limpia);
+  var informe = 'Favicon configurado: ' + limpia +
+    '\nPublique una versión nueva para que se aplique.';
   Logger.log(informe);
   return informe;
 }

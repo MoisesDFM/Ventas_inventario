@@ -12,11 +12,18 @@
  * Sirve una única página (SPA) y evalúa las plantillas HTML incluidas.
  */
 function doGet() {
-  var t = HtmlService.createTemplateFromFile('Index');
-  return t.evaluate()
+  var salida = HtmlService.createTemplateFromFile('Index').evaluate()
     .setTitle('Nechimotos · CRM de Inventarios y Ventas')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=5')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+
+  // El ícono de la pestaña debe fijarse aquí: la aplicación se sirve dentro de
+  // un iframe, así que un <link rel="icon"> en el HTML no llega a la pestaña
+  // del navegador. La URL debe ser pública (ver configurarFavicon en Setup.gs).
+  var favicon = PropertiesService.getScriptProperties().getProperty(PROP_FAVICON_URL);
+  if (favicon) salida.setFaviconUrl(favicon);
+
+  return salida;
 }
 
 /** Permite incluir StyleCss.html / AppJs.html / ReportesJs.html dentro de Index. */

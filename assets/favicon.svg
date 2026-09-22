@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Marca Nechimotos: cuadro redondeado rojo corporativo con la N. -->
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e11d2a"/>
+      <stop offset="1" stop-color="#b3141f"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#g)"/>
+  <path d="M150 366V146h54l104 140V146h54v220h-54L204 226v140z" fill="#fff"/>
+</svg>

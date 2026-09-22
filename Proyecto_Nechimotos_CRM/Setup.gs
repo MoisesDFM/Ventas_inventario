@@ -377,3 +377,38 @@ function repararMesVenta() {
   Logger.log(informe);
   return informe;
 }
+
+/**
+ * Fija la URL pública del ícono de la pestaña (favicon) de la Web App.
+ *
+ * Apps Script exige una URL accesible sin iniciar sesión; no acepta archivos
+ * locales ni imágenes incrustadas. La vía más simple es subir el PNG a Drive,
+ * compartirlo como "Cualquier persona con el enlace · Lector" y usar:
+ *
+ *   https://drive.google.com/uc?export=view&id=ID_DEL_ARCHIVO
+ *
+ * Después de ejecutarla hay que publicar una versión nueva para que el cambio
+ * llegue a la aplicación en uso.
+ *
+ * @param {string} url URL pública de la imagen (PNG o ICO). Vacío la quita.
+ * @return {string} Confirmación de lo configurado.
+ */
+function configurarFavicon(url) {
+  var props = PropertiesService.getScriptProperties();
+  var limpia = String(url || '').trim();
+
+  if (!limpia) {
+    props.deleteProperty(PROP_FAVICON_URL);
+    Logger.log('Favicon eliminado: la pestaña volverá al ícono por defecto.');
+    return 'Favicon eliminado.';
+  }
+  if (!/^https:\/\//.test(limpia)) {
+    throw new Error('La URL del favicon debe empezar por https://');
+  }
+
+  props.setProperty(PROP_FAVICON_URL, limpia);
+  var informe = 'Favicon configurado: ' + limpia +
+    '\nPublique una versión nueva para que se aplique.';
+  Logger.log(informe);
+  return informe;
+}

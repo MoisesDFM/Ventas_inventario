@@ -18,6 +18,13 @@ var PROP_SPREADSHEET_ID = 'SPREADSHEET_ID';
 var PROP_PEPPER = 'AUTH_PEPPER';
 
 /**
+ * Propiedad de script con la URL pública del ícono de la pestaña (favicon).
+ * Se configura con `configurarFavicon(url)` (Setup.gs) para no tener que tocar
+ * el código al cambiar el logo.
+ */
+var PROP_FAVICON_URL = 'FAVICON_URL';
+
+/**
  * ID del archivo `BaseDatos_Nechimotos_Master`.
  * Se recomienda NO dejarlo escrito en el código: ejecute `instalarNechimotos()`
  * (Setup.gs) que lo guarda en las Propiedades del Script. Si por alguna razón

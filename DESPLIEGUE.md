@@ -173,6 +173,38 @@ Tiene dos caminos:
 
 ---
 
+## Ícono de la pestaña (favicon)
+
+La aplicación se sirve dentro de un iframe, así que un `<link rel="icon">` en el
+HTML no llega a la pestaña del navegador: hay que fijarlo con `setFaviconUrl`, que
+exige una **URL pública**. El proyecto trae el ícono listo en `assets/`
+(`favicon-512.png`, `favicon-192.png`, `favicon-64.png` y el `favicon.svg` fuente).
+
+1. Suba `assets/favicon-192.png` a Drive (o el logo que prefiera, cuadrado).
+2. Clic derecho → **Compartir** → *Acceso general*: **Cualquier persona con el
+   enlace · Lector**. Si queda restringido, el navegador no podrá cargarlo.
+3. Copie el ID del archivo desde su enlace:
+   `https://drive.google.com/file/d/`**`1AbC...XyZ`**`/view`
+4. En el editor de Apps Script, ejecute:
+
+   ```js
+   configurarFavicon('https://drive.google.com/uc?export=view&id=1AbC...XyZ');
+   ```
+
+   Puede llamarla desde una función temporal, o pegar la línea dentro de una y
+   ejecutarla. La URL queda guardada en las Propiedades del Script, no en el código.
+5. **Publique una versión nueva** (*Gestionar implementaciones → ✏ → Nueva versión*)
+   y recargue con Ctrl+Shift+R.
+
+Para quitarlo: `configurarFavicon('')`.
+
+> Si el ícono no aparece, casi siempre es el permiso del archivo en Drive. Pruebe la
+> URL en una ventana de incógnito: si no muestra la imagen, el navegador tampoco la verá.
+> Cualquier otra URL pública sirve igual —por ejemplo la del logo en el sitio web de
+> la empresa—, no tiene que ser Drive.
+
+---
+
 ## Actualizar la aplicación más adelante
 
 Tras subir código nuevo (`clasp push` o pegando los archivos):
