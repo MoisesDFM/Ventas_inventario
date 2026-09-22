@@ -288,3 +288,47 @@ function generarPasswordTemporal_() {
   for (var i = 0; i < 8; i++) s += abc.charAt(Math.floor(Math.random() * abc.length));
   return 'Nechi' + s; // 13 caracteres, sin caracteres ambiguos (0/O, 1/l/I)
 }
+
+/**
+ * Diagnóstico de la pestaña `Ventas`.
+ * Ejecútela desde el editor cuando la vista de Ventas falle en la Web App:
+ * imprime el tamaño real de la hoja, la primera fila leída y el valor exacto
+ * que `obtenerVentas` devuelve al navegador.
+ *
+ * Si aquí funciona pero en la aplicación no, el problema es que la versión
+ * publicada quedó desactualizada (Implementar → Gestionar implementaciones).
+ */
+function diagnosticoVentas() {
+  var sh = getSheet_(SHEETS.VENTAS);
+  var lineas = [
+    'HOJA VENTAS',
+    '  getLastRow=' + sh.getLastRow() + '  getLastColumn=' + sh.getLastColumn(),
+    '  getMaxRows=' + sh.getMaxRows() + '  getMaxColumns=' + sh.getMaxColumns(),
+    '  columnas esperadas por el esquema=' + COLUMNS.Ventas.length
+  ];
+
+  try {
+    var t = leerTabla_(SHEETS.VENTAS);
+    lineas.push('LECTURA OK · filas con datos=' + t.filas.length);
+    if (t.filas.length) lineas.push('  primera fila: ' + JSON.stringify(t.filas[0].datos));
+  } catch (e) {
+    lineas.push('LECTURA FALLA · ' + e.message);
+  }
+
+  // Llama a la función tal como lo hace el navegador, con una sesión temporal.
+  try {
+    var token = crearSesion_({
+      ID_Usuario: 'DIAG', Usuario: 'diagnostico', Rol: ROLES.ADMIN,
+      PDV_Asignado: 'RED NACIONAL', Marca_Permitida: 'TODAS'
+    });
+    var r = obtenerVentas(token, {});
+    destruirSesion_(token);
+    lineas.push('obtenerVentas devuelve: ' + JSON.stringify(r));
+  } catch (e) {
+    lineas.push('obtenerVentas LANZA: ' + e.message + ' | ' + (e.stack || ''));
+  }
+
+  var informe = lineas.join('\n');
+  Logger.log(informe);
+  return informe;
+}

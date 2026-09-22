@@ -21,6 +21,9 @@ class FakeSheet {
   _set(r, c, v) { while (this._rows.length < r) this._rows.push([]); this._rows[r - 1][c - 1] = v; }
   getName() { return this.name; }
   getLastRow() { return this._rows.length; }
+  getLastColumn() { return this._rows.reduce((m, r) => Math.max(m, r.length), 0); }
+  getMaxRows() { return Math.max(1000, this._rows.length); }
+  getMaxColumns() { return Math.max(26, this.getLastColumn()); }
   getRange(r, c, nr = 1, nc = 1) { return new FakeRange(this, r, c, nr, nc); }
   appendRow(vals) { this._rows.push(vals.slice()); }
   deleteRow(r) { this._rows.splice(r - 1, 1); }
