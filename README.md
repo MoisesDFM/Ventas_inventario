@@ -54,51 +54,27 @@ Usuarios de la demostración:
 
 Para regenerarlo después de tocar el código: `node demo/generar-demo.js`.
 
-## Instalación (una sola vez)
+## Despliegue
 
-1. Cree un proyecto en [script.google.com](https://script.google.com) y suba los
-   archivos de `Proyecto_Nechimotos_CRM/` (manualmente o con `clasp push`).
-2. Verifique en `Config.gs` el arreglo `CATALOGO_PDV`: trae los 27 puntos reales
-   de la red. Los nombres allí escritos son la llave del sistema y deben coincidir
-   exactamente con `PDV_Actual` en `Inventario` y `PDV_Venta` en `Ventas`.
-3. Ejecute **`instalarNechimotos()`**. Crea `BaseDatos_Nechimotos_Master` con las
-   5 pestañas, encabezados, formatos y validaciones, y guarda su ID en las
-   Propiedades del Script (el ID nunca queda escrito en el código).
-4. Edite usuario y contraseña en **`crearAdminInicial()`** y ejecútelo.
-5. Opcional: `cargarDatosDemo()` para inventario de prueba.
-6. **Implementar → Nueva implementación → Aplicación web**
-   · *Ejecutar como*: Yo (el propietario del archivo maestro)
-   · *Quién tiene acceso*: Cualquier usuario.
-   El control de acceso lo hace la aplicación con su propia tabla `Usuarios`,
-   de modo que los asesores no necesitan cuenta de Workspace ni permisos sobre Drive.
-7. Ingrese con el ADMIN y cambie la contraseña desde *Cambiar contraseña*.
+El procedimiento completo está en **[DESPLIEGUE.md](DESPLIEGUE.md)**: crear el proyecto
+(con `clasp` o copiando archivos), instalar la base de datos, crear las cuentas, publicar
+la aplicación web, verificar en caliente y actualizar después sin cambiar la URL.
 
-## Red de puntos de venta (27 PDV)
+Resumen de las funciones de instalación, que se ejecutan desde el editor de Apps Script
+y no están expuestas a la aplicación:
 
-Definidos en `CATALOGO_PDV` (`Config.gs`). El acceso por marca restringe qué
-unidades puede alojar cada punto y, por lo tanto, qué destinos ofrece el módulo
-de traslados.
+| Función | Qué hace |
+|---|---|
+| `instalarNechimotos()` | Crea `BaseDatos_Nechimotos_Master` con las 5 pestañas, encabezados, formatos y validaciones, y guarda su ID en las Propiedades del Script |
+| `crearAdminInicial()` | Crea la primera cuenta ADMIN (edite usuario y clave antes de ejecutar) |
+| `crearUsuariosIniciales()` | Crea de una vez un `ASESOR_PDV` por cada uno de los 27 puntos, con su marca permitida y una clave temporal que se imprime **una sola vez** en el registro |
+| `verificarInstalacion()` | Comprueba pestañas, encabezados, hashes, ADMIN activo, duplicados del catálogo y PDV mal escritos en el inventario |
+| `cargarDatosDemo()` | Inventario de ejemplo para pruebas (no ejecutar en producción) |
 
-| PDV | Acceso | PDV | Acceso |
-|---|---|---|---|
-| MAJAGUAL | TODAS | MAGANGUE 1 | TODAS |
-| NECHI | TODAS | MAGANGUE 2 | TODAS |
-| SUCRE | TODAS | PAILITAS | TODAS |
-| ZARAGOZA | TODAS | PELAYA | TODAS |
-| PLANETA | TODAS | ASTREA | TODAS |
-| GUARANDA | TODAS | GUAMAL | TODAS |
-| MONTELIBANO MOBILITY | MOBILITY | LA JAGUA | TODAS |
-| MONTELIBANO TVS | TVS | BECERRIL | TODAS |
-| PUERTO LIBERTADOR | TODAS | CODAZZI | TODAS |
-| SAN MARCOS | TODAS | CURUMANI | TODAS |
-| AYAPEL | TODAS | CHIRIGUANA | TODAS |
-| LA APARTADA | TODAS | SANTA ANA | TODAS |
-| SAN MARTIN | TODAS | BANCO MOBILITY | MOBILITY |
-| BANCO TVS | TVS | | |
-
-Montelíbano y El Banco operan vitrina separada por marca, por eso figuran como
-dos puntos independientes: una moto TVS nunca puede trasladarse a
-`MONTELIBANO MOBILITY` ni a `BANCO MOBILITY`, y viceversa.
+Al publicar: *Ejecutar como* **Yo** (propietario del archivo maestro) y *Quién tiene
+acceso* **Cualquier usuario**. Esto último solo permite que cargue la pantalla de login:
+el control de acceso lo hace la aplicación con su tabla `Usuarios`, de modo que los
+asesores no necesitan cuenta de Workspace ni permisos sobre Drive.
 
 ## Roles y permisos (validados en el servidor)
 
@@ -154,7 +130,8 @@ desde el navegador.
 ## Pruebas
 
 ```bash
-node tests/reglas-negocio.test.js
+node tests/reglas-negocio.test.js   # reglas de negocio y control de acceso
+node tests/despliegue.test.js        # instaladores y verificación de instalación
 ```
 
 Ejecuta el backend en Node con dobles de prueba de los servicios de Google; valida

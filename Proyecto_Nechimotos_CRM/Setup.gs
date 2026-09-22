@@ -148,3 +148,143 @@ function cargarDatosDemo() {
   });
   Logger.log('Datos demo cargados.');
 }
+
+/**
+ * ============================================================================
+ *  HERRAMIENTAS DE DESPLIEGUE
+ * ============================================================================
+ */
+
+/**
+ * Verifica que la instalación esté completa y correcta.
+ * Ejecútela desde el editor después de instalar y antes de publicar la Web App:
+ * el resultado aparece en el registro de ejecución (Ver → Registros).
+ *
+ * @return {string} Informe legible del estado de la instalación.
+ */
+function verificarInstalacion() {
+  var lineas = [], errores = 0;
+  var revisar = function (etiqueta, condicion, detalle) {
+    lineas.push((condicion ? '  OK    ' : '  FALLA ') + etiqueta + (detalle ? ' — ' + detalle : ''));
+    if (!condicion) errores++;
+  };
+
+  // 1. Archivo maestro
+  var url = '';
+  try {
+    url = getSpreadsheet_().getUrl();
+    revisar('Archivo maestro accesible', true, url);
+  } catch (e) {
+    revisar('Archivo maestro accesible', false, e.message);
+    Logger.log(lineas.join('\n'));
+    return lineas.join('\n');
+  }
+
+  // 2. Pestañas y encabezados exactos
+  Object.keys(COLUMNS).forEach(function (nombre) {
+    var sh = getSpreadsheet_().getSheetByName(nombre);
+    if (!sh) return revisar('Pestaña ' + nombre, false, 'no existe');
+    var esperados = COLUMNS[nombre];
+    var reales = sh.getRange(1, 1, 1, esperados.length).getValues()[0]
+      .map(function (h) { return String(h).trim(); });
+    var iguales = esperados.every(function (c, i) { return c === reales[i]; });
+    revisar('Pestaña ' + nombre, iguales,
+      iguales ? esperados.length + ' columnas' : 'encabezados distintos: ' + reales.join(', '));
+  });
+
+  // 3. Seguridad
+  revisar('Pepper criptográfico generado',
+    !!PropertiesService.getScriptProperties().getProperty(PROP_PEPPER));
+
+  // 4. Cuentas
+  var usuarios = leerTabla_(SHEETS.USUARIOS).filas.map(function (f) { return f.datos; });
+  var admins = usuarios.filter(function (u) {
+    return norm_(u.Rol) === ROLES.ADMIN && norm_(u.Estado_Cuenta) === 'ACTIVO';
+  });
+  revisar('Al menos un ADMIN activo', admins.length > 0,
+    admins.map(function (u) { return u.Usuario; }).join(', ') || 'ejecute crearAdminInicial()');
+  revisar('Contraseñas almacenadas como hash',
+    usuarios.every(function (u) { return /^[0-9a-f]{64}$/.test(String(u.Password_Hash).trim()); }),
+    usuarios.length + ' cuentas');
+
+  // 5. Catálogo de puntos
+  var nombres = CATALOGO_PDV.map(function (p) { return p.nombre; });
+  revisar('Catálogo de PDV sin duplicados',
+    new Set(nombres.map(norm_)).size === nombres.length, nombres.length + ' puntos');
+
+  // 6. Coherencia inventario ↔ catálogo (detecta PDV mal escritos)
+  var huerfanos = {};
+  leerTabla_(SHEETS.INVENTARIO).filas.forEach(function (f) {
+    var p = String(f.datos.PDV_Actual).trim();
+    if (p && nombres.map(norm_).indexOf(norm_(p)) === -1) huerfanos[p] = true;
+  });
+  revisar('Inventario con PDV reconocidos', Object.keys(huerfanos).length === 0,
+    Object.keys(huerfanos).join(', ') || 'sin inconsistencias');
+
+  var informe = 'VERIFICACIÓN DE INSTALACIÓN · NECHIMOTOS CRM\n' +
+    lineas.join('\n') + '\n\n' +
+    (errores === 0
+      ? 'Todo correcto. Ya puede publicar la aplicación web.'
+      : errores + ' punto(s) por corregir antes de publicar.');
+  Logger.log(informe);
+  return informe;
+}
+
+/**
+ * Crea de una sola vez una cuenta `ASESOR_PDV` por cada punto del catálogo,
+ * con contraseña temporal aleatoria y la marca permitida que corresponde a ese
+ * punto. Omite los usuarios que ya existan, así que puede re-ejecutarse tras
+ * agregar un PDV nuevo.
+ *
+ * Las contraseñas se imprimen UNA sola vez en el registro de ejecución: cópielas
+ * y entréguelas por un canal privado. No quedan guardadas en ninguna parte (en
+ * la hoja solo vive el hash). Cada asesor debe cambiarla al primer ingreso.
+ *
+ * @return {string} Tabla con usuario, PDV, marca y contraseña temporal.
+ */
+function crearUsuariosIniciales() {
+  var creados = [], omitidos = [];
+
+  CATALOGO_PDV.forEach(function (p, i) {
+    var usuario = 'asesor.' + nombreUsuarioDesdePdv_(p.nombre);
+    if (buscarUsuario_(usuario)) { omitidos.push(usuario); return; }
+
+    var marca = p.marcas.length > 1 ? 'TODAS' : (p.marcas[0] === MARCAS.TVS ? 'TVS' : 'MOBILITY');
+    var clave = generarPasswordTemporal_();
+
+    anexarFila_(SHEETS.USUARIOS, {
+      ID_Usuario: 'U-PDV-' + ('00' + (i + 1)).slice(-3),
+      Usuario: usuario,
+      Password_Hash: hashPassword(usuario, clave),
+      Rol: ROLES.ASESOR_PDV,
+      PDV_Asignado: p.nombre,
+      Marca_Permitida: marca,
+      Estado_Cuenta: 'Activo'
+    });
+    creados.push([usuario, p.nombre, marca, clave]);
+  });
+
+  var informe = 'CUENTAS CREADAS (' + creados.length + ')\n' +
+    'ENTREGUE ESTAS CLAVES POR CANAL PRIVADO. NO VOLVERÁN A MOSTRARSE.\n\n' +
+    'usuario;PDV;marca;clave_temporal\n' +
+    creados.map(function (c) { return c.join(';'); }).join('\n') +
+    (omitidos.length ? '\n\nOmitidos por existir ya: ' + omitidos.join(', ') : '');
+  Logger.log(informe);
+  return informe;
+}
+
+/** Convierte 'MONTELIBANO TVS' en 'montelibano.tvs' (sin tildes ni espacios). */
+function nombreUsuarioDesdePdv_(nombrePdv) {
+  return String(nombrePdv).toLowerCase()
+    .replace(/[áàä]/g, 'a').replace(/[éèë]/g, 'e').replace(/[íìï]/g, 'i')
+    .replace(/[óòö]/g, 'o').replace(/[úùü]/g, 'u').replace(/ñ/g, 'n')
+    .replace(/[^a-z0-9]+/g, '.').replace(/^\.|\.$/g, '');
+}
+
+/** Contraseña temporal legible de 12 caracteres (cumple el mínimo de 8). */
+function generarPasswordTemporal_() {
+  var abc = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+  var s = '';
+  for (var i = 0; i < 8; i++) s += abc.charAt(Math.floor(Math.random() * abc.length));
+  return 'Nechi' + s; // 13 caracteres, sin caracteres ambiguos (0/O, 1/l/I)
+}
