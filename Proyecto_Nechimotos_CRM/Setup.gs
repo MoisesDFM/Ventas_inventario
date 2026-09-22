@@ -91,6 +91,12 @@ function aplicarFormatosFecha_(ss) {
   ss.getSheetByName(SHEETS.VENTAS)
     .getRange(2, COLUMNS.Ventas.indexOf('Fecha_Venta') + 1, 5000)
     .setNumberFormat('yyyy-mm-dd hh:mm:ss');
+  // Mes_Venta guarda el texto '2026-09'. Sin formato de texto plano, Sheets lo
+  // interpreta como 1 de septiembre de 2026 y lo convierte en fecha, con lo que
+  // todos los filtros y reportes por mes dejan de coincidir.
+  ss.getSheetByName(SHEETS.VENTAS)
+    .getRange(2, COLUMNS.Ventas.indexOf('Mes_Venta') + 1, 5000)
+    .setNumberFormat('@');
   ss.getSheetByName(SHEETS.TRASLADOS)
     .getRange(2, COLUMNS.Traslados.indexOf('Fecha_Despacho') + 1, 5000, 2)
     .setNumberFormat('yyyy-mm-dd hh:mm:ss');
@@ -329,6 +335,45 @@ function diagnosticoVentas() {
   }
 
   var informe = lineas.join('\n');
+  Logger.log(informe);
+  return informe;
+}
+
+/**
+ * Repara la columna `Mes_Venta` de instalaciones anteriores.
+ *
+ * Si la columna no tenía formato de texto plano, Google Sheets convirtió cada
+ * '2026-09' en una fecha. Esta función deja la columna como texto y reescribe
+ * los valores en el formato correcto 'YYYY-MM'. Es segura de re-ejecutar: los
+ * valores que ya estén bien quedan igual.
+ *
+ * @return {string} Resumen de lo reparado.
+ */
+function repararMesVenta() {
+  var sh = getSheet_(SHEETS.VENTAS);
+  var col = COLUMNS.Ventas.indexOf('Mes_Venta') + 1;
+  var ultima = sh.getLastRow();
+
+  // Primero el formato, luego los valores: al revés Sheets volvería a convertir.
+  sh.getRange(2, col, Math.max(sh.getMaxRows() - 1, 1)).setNumberFormat('@');
+
+  if (ultima < 2) {
+    Logger.log('Columna Mes_Venta formateada como texto. No hay ventas que reparar.');
+    return 'Sin ventas que reparar.';
+  }
+
+  var rango = sh.getRange(2, col, ultima - 1);
+  var originales = rango.getValues();
+  var corregidos = originales.map(function (f) { return [mesVenta_(f[0])]; });
+  rango.setValues(corregidos);
+  SpreadsheetApp.flush();
+
+  var cambiadas = originales.filter(function (f, i) {
+    return String(f[0]) !== corregidos[i][0];
+  }).length;
+
+  var informe = 'Mes_Venta reparada: ' + cambiadas + ' de ' + originales.length +
+    ' filas corregidas. Ejemplo: ' + corregidos[0][0];
   Logger.log(informe);
   return informe;
 }

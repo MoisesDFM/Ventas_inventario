@@ -37,6 +37,26 @@ function calcularMesVenta_(fecha) {
   return Utilities.formatDate(fecha, TZ, 'yyyy-MM');
 }
 
+/**
+ * Lee el periodo 'YYYY-MM' de una fila de `Ventas`.
+ *
+ * Google Sheets interpreta el texto '2026-09' como una fecha y lo almacena
+ * como tal, así que el valor recuperado puede ser texto o Date según cómo haya
+ * quedado la celda. Toda comparación por mes debe pasar por aquí: comparar el
+ * valor crudo contra 'YYYY-MM' falla silenciosamente cuando es un Date.
+ *
+ * @param {string|Date} valor Contenido de la celda Mes_Venta.
+ * @return {string} Periodo normalizado 'YYYY-MM'.
+ */
+function mesVenta_(valor) {
+  if (valor instanceof Date) return Utilities.formatDate(valor, TZ, 'yyyy-MM');
+  var s = String(valor === null || valor === undefined ? '' : valor).trim();
+  var m = s.match(/^(\d{4})-(\d{2})/);
+  if (m) return m[1] + '-' + m[2];
+  var d = new Date(s);
+  return isNaN(d.getTime()) ? s : Utilities.formatDate(d, TZ, 'yyyy-MM');
+}
+
 /** Genera un consecutivo único de venta: V-AAAAMMDD-HHMMSS-XXX. */
 function generarIdVenta_() {
   var ahora = new Date();
@@ -158,7 +178,7 @@ function obtenerVentas(token, filtro) {
     for (var i = tabla.filas.length - 1; i >= 0 && out.length < limite; i--) {
       var d = tabla.filas[i].datos;
       if (!puedeVer_(ses, d.PDV_Venta, d.Marca)) continue;
-      if (fMes && String(d.Mes_Venta).trim() !== fMes) continue;
+      if (fMes && mesVenta_(d.Mes_Venta) !== fMes) continue;
       if (fSemana && norm_(d.Semana_Mes) !== norm_(fSemana)) continue;
       if (fAno && String(d.Ano).trim() !== fAno) continue;
       if (fPdv && norm_(d.PDV_Venta) !== fPdv) continue;
@@ -170,7 +190,7 @@ function obtenerVentas(token, filtro) {
       out.push({
         ID_Venta: d.ID_Venta,
         Fecha_Venta: formatearFechaHora_(d.Fecha_Venta),
-        Mes_Venta: d.Mes_Venta,
+        Mes_Venta: mesVenta_(d.Mes_Venta),
         Semana_Mes: d.Semana_Mes,
         Ano: d.Ano,
         Chasis_VIN: d.Chasis_VIN,
@@ -203,7 +223,7 @@ function resumenVentasMesActual(token) {
 
     leerTabla_(SHEETS.VENTAS).filas.forEach(function (f) {
       var d = f.datos;
-      if (String(d.Mes_Venta).trim() !== mesActual) return;
+      if (mesVenta_(d.Mes_Venta) !== mesActual) return;
       if (!puedeVer_(ses, d.PDV_Venta, d.Marca)) return;
       total++;
       if (norm_(d.Marca) === 'TVS') tvs++; else mobility++;

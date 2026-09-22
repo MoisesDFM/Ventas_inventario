@@ -56,13 +56,13 @@ function obtenerReporteEjecutivo(token, filtro) {
       if (d.Ano) aniosDisponibles[String(d.Ano).trim()] = true;
 
       if (fAno && String(d.Ano).trim() !== fAno) return;
-      if (fMes && String(d.Mes_Venta).trim() !== fMes) return;
+      if (fMes && mesVenta_(d.Mes_Venta) !== fMes) return;
       if (fSemana && norm_(d.Semana_Mes) !== norm_(fSemana)) return;
       if (fPdv && norm_(d.PDV_Venta) !== fPdv) return;
       if (fMarca && norm_(d.Marca) !== fMarca) return;
 
       total++;
-      acumular_(porMes, String(d.Mes_Venta).trim());
+      acumular_(porMes, mesVenta_(d.Mes_Venta));
       acumular_(porSemana, String(d.Semana_Mes).trim());
       acumular_(porPdv, String(d.PDV_Venta).trim());
       acumular_(porMarca, String(d.Marca).trim());
@@ -135,7 +135,7 @@ function obtenerMatrizPdvSemana(token, mes) {
 
     leerTabla_(SHEETS.VENTAS).filas.forEach(function (f) {
       var d = f.datos;
-      if (String(d.Mes_Venta).trim() !== periodo) return;
+      if (mesVenta_(d.Mes_Venta) !== periodo) return;
       var pdv = String(d.PDV_Venta).trim() || 'SIN DATO';
       if (!mapa[pdv]) { mapa[pdv] = { pdv: pdv, total: 0 }; semanas.forEach(function (s) { mapa[pdv][s] = 0; }); }
       var sem = String(d.Semana_Mes).trim();
@@ -200,7 +200,7 @@ function obtenerAlertas(token) {
 
     var pdvConVenta = {};
     leerTabla_(SHEETS.VENTAS).filas.forEach(function (f) {
-      if (String(f.datos.Mes_Venta).trim() === mesActual) {
+      if (mesVenta_(f.datos.Mes_Venta) === mesActual) {
         pdvConVenta[norm_(f.datos.PDV_Venta)] = true;
       }
     });
@@ -229,7 +229,7 @@ function miDesempeno(token, mes) {
 
     leerTabla_(SHEETS.VENTAS).filas.forEach(function (f) {
       var d = f.datos;
-      if (String(d.Mes_Venta).trim() !== periodo) return;
+      if (mesVenta_(d.Mes_Venta) !== periodo) return;
       if (!puedeVer_(ses, d.PDV_Venta, d.Marca)) return;
       delPdv++;
       if (norm_(d.Asesor_Vendedor) === norm_(ses.usuario)) {

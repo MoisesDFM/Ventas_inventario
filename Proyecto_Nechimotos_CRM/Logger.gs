@@ -124,6 +124,37 @@ function diasEntre_(desde, hasta) {
 }
 
 /**
+ * Convierte a texto cualquier objeto Date que haya quedado dentro de la
+ * respuesta antes de enviarla al navegador.
+ *
+ * Es una red de seguridad necesaria: los valores llegan de Google Sheets, que
+ * convierte solo algunos textos en fechas (por ejemplo '2026-09' se guarda como
+ * 1 de septiembre de 2026). Si un Date crudo viaja dentro del objeto de
+ * respuesta, `google.script.run` no lo entrega y el cliente recibe una
+ * respuesta vacía, sin ningún error que explique por qué.
+ *
+ * @param {*} valor       Dato a normalizar (escalar, arreglo u objeto).
+ * @param {number} nivel  Profundidad de recursión (uso interno).
+ */
+function normalizarSalida_(valor, nivel) {
+  nivel = nivel || 0;
+  if (valor === null || valor === undefined) return valor;
+  if (valor instanceof Date) return formatearFechaHora_(valor);
+  if (nivel > 6) return String(valor);
+  if (Array.isArray(valor)) {
+    return valor.map(function (v) { return normalizarSalida_(v, nivel + 1); });
+  }
+  if (typeof valor === 'object') {
+    var salida = {};
+    Object.keys(valor).forEach(function (k) {
+      salida[k] = normalizarSalida_(valor[k], nivel + 1);
+    });
+    return salida;
+  }
+  return valor;
+}
+
+/**
  * Envoltura estándar de todas las funciones expuestas a `google.script.run`.
  * Normaliza la respuesta a { ok: boolean, data|error } para que el frontend
  * nunca reciba trazas internas del servidor.
@@ -132,7 +163,7 @@ function diasEntre_(desde, hasta) {
  */
 function ejecutarSeguro_(fn) {
   try {
-    return { ok: true, data: fn() };
+    return { ok: true, data: normalizarSalida_(fn()) };
   } catch (e) {
     var msg = e && e.message ? e.message : String(e);
     console.error(msg + (e && e.stack ? ' | ' + e.stack : ''));
